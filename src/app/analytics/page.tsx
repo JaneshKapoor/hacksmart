@@ -230,11 +230,11 @@ export default function AnalyticsPage() {
                                     {hasScenario ? 'Comparing current scenario to baseline' : 'Apply a scenario to see comparison'}
                                 </p>
                             </div>
-                            {hasScenario && (
+                            {/* {hasScenario && (
                                 <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full">
                                     {state.activeScenario?.replace('_', ' ').toUpperCase()}
                                 </span>
-                            )}
+                            )} */}
                         </div>
                         <div className="space-y-4">
                             {kpiComparison.map((kpi) => {
