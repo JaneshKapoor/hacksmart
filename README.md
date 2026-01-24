@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BatterySmart Digital Twin
 
-## Getting Started
+A real-time simulation platform for testing "what-if" scenarios on a battery swap station network.
 
-First, run the development server:
+## 🚀 Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📖 How to Use
 
-## Learn More
+### Step 1: Control Center (Main Page)
+The main dashboard shows 8 battery swap stations on an interactive map.
 
-To learn more about Next.js, take a look at the following resources:
+| Feature | Description |
+|---------|-------------|
+| **Network Map** | Visual display of all stations with status colors |
+| **KPI Dashboard** | Real-time performance metrics |
+| **Scenario Builder** | Test different scenarios |
+| **Simulation Controls** | Start, pause, reset, speed controls |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Step 2: Apply a Scenario
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Select a scenario tab** on the right panel:
+   - **Demand** → Weather effects (rain, heat) that change demand
+   - **Capacity** → Add/remove chargers at stations
+   - **Failures** → Simulate emergencies (fire, power outage)
+   - **Pricing** → Dynamic peak-hour pricing
+   - **Inventory** → Safety stock levels
 
-## Deploy on Vercel
+2. **Configure parameters** using sliders or buttons
+3. Click **"Apply Scenario & See Impact"**
+4. Click **"Run Simulation"** to start
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Step 3: View Analytics
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Click **"Analytics"** button in the header
+2. See real-time performance charts that update during simulation
+3. Compare **Baseline vs Scenario** KPIs
+4. Review **Station Performance** table
+5. Check **Insights & Recommendations** for AI suggestions
+
+---
+
+## ⏱️ Timeline
+
+| Phase | Action |
+|-------|--------|
+| **Before** | Select scenario, configure parameters |
+| **During** | Watch map animations, monitor KPIs in real-time |
+| **After** | Review Analytics page for detailed comparison |
+
+---
+
+## 🎯 Scenarios Explained
+
+| Scenario | What It Tests |
+|----------|---------------|
+| **Baseline** | Normal network state (no changes) |
+| **Demand** | How weather affects swap demand |
+| **Capacity** | Impact of adding/removing chargers |
+| **Failures** | Emergency response and driver rerouting |
+| **Pricing** | Peak pricing to balance demand |
+| **Inventory** | Safety stock and battery redistribution |
+| **Station Ops** | Adding new stations to network |
+
+---
+
+## 🗂️ Tech Stack
+
+- **Next.js 14** with App Router
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **Recharts** for data visualization
+- **Lucide React** for icons
+
+---
+
+## 📂 Project Structure
+
+```
+src/
+├── app/                 # Next.js pages
+│   ├── page.tsx         # Control Center (main)
+│   └── analytics/       # Analytics page
+├── components/          # UI components
+├── hooks/               # Custom hooks (useSimulation)
+└── simulation/          # Engine, types, mock data
+```
