@@ -5,6 +5,11 @@ export interface Position {
     y: number;
 }
 
+export interface GeoPosition {
+    lat: number;
+    lng: number;
+}
+
 export type StationStatus =
     | 'operational'
     | 'overloaded'
@@ -36,6 +41,7 @@ export interface Station {
     operatingHours: { start: number; end: number };
     coverageRadius: number; // in km
     isNew?: boolean;
+    geoPosition?: GeoPosition;
 }
 
 export interface Driver {

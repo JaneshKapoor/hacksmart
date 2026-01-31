@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { SimulationProvider } from "@/contexts/SimulationContext";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BatterySmart | Digital Twin Simulation",
+  title: "ElectriGo | Digital Twin Simulation",
   description: "Digital twin simulation of a city's battery swap station network. Run what-if experiments to optimize operations.",
   keywords: ["digital twin", "simulation", "battery swap", "EV charging", "network optimization"],
 };
@@ -21,7 +22,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <SimulationProvider>
+          {children}
+        </SimulationProvider>
+      </body>
     </html>
   );
 }

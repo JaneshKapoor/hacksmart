@@ -1,4 +1,4 @@
-// Enhanced Simulation Engine
+// Enhanced Simulation Engine with improved KPIs, demand modeling, and all scenarios
 
 import {
     Station, Driver, SimulationState, KPIMetrics, TimeSeriesPoint,
@@ -11,22 +11,55 @@ import {
     demandCurves
 } from './mockData';
 
+export interface EngineConfig {
+    stations?: Station[];
+    drivers?: Driver[];
+}
+
+// Poisson-distributed random number
+function poissonRandom(lambda: number): number {
+    let L = Math.exp(-lambda);
+    let k = 0;
+    let p = 1;
+    do {
+        k++;
+        p *= Math.random();
+    } while (p > L);
+    return k - 1;
+}
+
+const AVG_SWAP_DURATION = 4; // minutes per swap
+const DRIVER_SPEED = 8; // units per minute (percentage-based)
+const MAX_DRIVERS = 30;
+
 export class SimulationEngine {
     private state: SimulationState;
+    private config: EngineConfig;
+    private recentSwaps: number[] = []; // timestamps of recent completed swaps
 
-    constructor() {
+    constructor(config?: EngineConfig) {
+        this.config = config || {};
         this.state = this.createInitialState();
     }
 
     private createInitialState(): SimulationState {
+        const stations = this.config.stations
+            ? JSON.parse(JSON.stringify(this.config.stations))
+            : JSON.parse(JSON.stringify(initialStations));
+        const drivers = this.config.drivers
+            ? JSON.parse(JSON.stringify(this.config.drivers))
+            : JSON.parse(JSON.stringify(initialDrivers));
+
+        const computedBaseline = this.computeBaselineKPIs(stations);
+
         return {
             time: 480, // 8:00 AM
             day: 1,
             hour: 8,
-            stations: JSON.parse(JSON.stringify(initialStations)),
-            drivers: JSON.parse(JSON.stringify(initialDrivers)),
-            baselineKPIs: { ...baselineKPIs },
-            scenarioKPIs: { ...baselineKPIs },
+            stations,
+            drivers,
+            baselineKPIs: computedBaseline,
+            scenarioKPIs: { ...computedBaseline },
             timeSeriesData: [],
             isRunning: false,
             speed: 1,
@@ -39,6 +72,41 @@ export class SimulationEngine {
         };
     }
 
+    private computeBaselineKPIs(stations: Station[]): KPIMetrics {
+        const operational = stations.filter(
+            (s) => s.status !== 'fire' && s.status !== 'power_outage' && s.status !== 'offline'
+        );
+        if (operational.length === 0) return { ...baselineKPIs };
+
+        const totalWaitTime = operational.reduce((sum, s) => sum + s.avgWaitTime, 0);
+        const activeChargers = operational.reduce((sum, s) => sum + s.activeChargers, 0);
+        const totalInventory = operational.reduce((sum, s) => sum + s.inventoryCap, 0);
+        const currentInventory = operational.reduce((sum, s) => sum + s.currentInventory, 0);
+        const chargingCount = operational.reduce((sum, s) => sum + s.chargingBatteries, 0);
+        const totalSwaps = operational.reduce((sum, s) => sum + s.totalSwaps, 0);
+        const totalLostSwaps = operational.reduce((sum, s) => sum + s.lostSwaps, 0);
+
+        return {
+            avgWaitTime: totalWaitTime / operational.length,
+            lostSwaps: totalLostSwaps,
+            idleInventory: Math.max(0, totalInventory - currentInventory - chargingCount),
+            chargerUtilization: activeChargers > 0 ? chargingCount / activeChargers : 0,
+            operationalCost: this.calculateOperationalCost(operational),
+            cityThroughput: Math.floor((activeChargers * 60) / AVG_SWAP_DURATION),
+            reroutedDrivers: 0,
+            emergencyEvents: 0,
+            revenue: totalSwaps * 150,
+            peakWaitTime: Math.max(...operational.map((s) => s.avgWaitTime), 0),
+            averageQueueLength: operational.reduce((sum, s) => sum + s.queueLength, 0) / operational.length,
+        };
+    }
+
+    loadNewStations(newStations: Station[]): void {
+        this.config.stations = newStations;
+        this.state = this.createInitialState();
+        this.recentSwaps = [];
+    }
+
     getState(): SimulationState {
         return this.state;
     }
@@ -47,10 +115,10 @@ export class SimulationEngine {
         const currentScenario = this.state.activeScenario;
         const currentInterventions = this.state.interventions;
         this.state = this.createInitialState();
+        this.recentSwaps = [];
         this.state.activeScenario = currentScenario;
         this.state.interventions = currentInterventions;
 
-        // Re-apply interventions
         currentInterventions.forEach((int) => this.applyIntervention(int));
         this.recalculateKPIs();
     }
@@ -82,7 +150,7 @@ export class SimulationEngine {
             case 'add_station':
                 if (intervention.position) {
                     const newStation: Station = {
-                        id: `station-new-${Date.now()}`,
+                        id: `station-new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                         name: `New Station`,
                         location: 'New Location',
                         position: intervention.position,
@@ -110,21 +178,23 @@ export class SimulationEngine {
 
             case 'remove_station':
                 if (intervention.stationId) {
-                    const stationToRemove = this.state.stations.find((s) => s.id === intervention.stationId);
-                    if (stationToRemove) {
-                        stationToRemove.status = 'offline';
-                        // Reroute drivers
+                    const station = this.state.stations.find((s) => s.id === intervention.stationId);
+                    if (station) {
+                        station.status = 'offline';
+                        station.activeChargers = 0;
                         this.rerouteFromStation(intervention.stationId);
+                        this.addAlert('warning', `Station ${station.name} taken offline`, station.id);
                     }
                 }
                 break;
 
             case 'modify_chargers':
                 if (intervention.stationId && typeof intervention.value === 'number') {
+                    const newChargerCount = intervention.value;
                     const station = this.state.stations.find((s) => s.id === intervention.stationId);
                     if (station) {
-                        station.chargers = intervention.value;
-                        station.activeChargers = intervention.value;
+                        station.chargers = Math.max(1, newChargerCount);
+                        station.activeChargers = Math.max(1, newChargerCount);
                     }
                 }
                 break;
@@ -137,26 +207,26 @@ export class SimulationEngine {
                             case 'fire':
                                 station.status = 'fire';
                                 station.activeChargers = 0;
-                                this.addAlert('danger', `🔥 Fire emergency at ${station.name}!`, station.id);
+                                this.addAlert('danger', `Fire emergency at ${station.name}!`, station.id);
                                 break;
                             case 'power_outage':
                                 station.status = 'power_outage';
                                 station.activeChargers = 0;
-                                this.addAlert('danger', `⚡ Power outage at ${station.name}`, station.id);
+                                this.addAlert('danger', `Power outage at ${station.name}`, station.id);
                                 break;
                             case 'overload':
                                 station.status = 'overloaded';
                                 station.queueLength = station.bays * 2;
-                                this.addAlert('warning', `⚠️ ${station.name} is overloaded`, station.id);
+                                this.addAlert('warning', `${station.name} is overloaded`, station.id);
                                 break;
                             case 'charger_failure':
-                                station.activeChargers = Math.floor(station.chargers / 2);
-                                this.addAlert('warning', `🔌 Charger failure at ${station.name}`, station.id);
+                                station.activeChargers = Math.max(1, Math.floor(station.chargers / 2));
+                                this.addAlert('warning', `Charger failure at ${station.name}`, station.id);
                                 break;
                             case 'no_battery':
                                 station.currentInventory = 0;
                                 station.status = 'low_inventory';
-                                this.addAlert('warning', `🔋 No batteries at ${station.name}`, station.id);
+                                this.addAlert('warning', `No batteries at ${station.name}`, station.id);
                                 break;
                         }
                         this.rerouteFromStation(station.id);
@@ -167,14 +237,14 @@ export class SimulationEngine {
 
             case 'demand_shift':
                 if (typeof intervention.value === 'number') {
-                    const multiplier = intervention.value;
-                    this.state.demandConfig.weatherMultiplier = multiplier;
-                    // Apply demand increase to all stations
+                    const demandMultiplier = intervention.value;
+                    this.state.demandConfig.weatherMultiplier = demandMultiplier;
                     this.state.stations.forEach((station) => {
-                        station.queueLength = Math.floor(station.queueLength * multiplier);
-                        station.utilizationRate = Math.min(0.99, station.utilizationRate * multiplier);
-                        station.avgWaitTime *= multiplier;
-                        if (station.utilizationRate > 0.9) {
+                        if (station.status === 'offline' || station.status === 'fire' || station.status === 'power_outage') return;
+                        station.queueLength = Math.floor(station.queueLength * demandMultiplier);
+                        station.utilizationRate = Math.min(0.99, station.utilizationRate * demandMultiplier);
+                        station.avgWaitTime *= demandMultiplier;
+                        if (station.utilizationRate > 0.9 && station.status === 'operational') {
                             station.status = 'overloaded';
                         }
                     });
@@ -183,10 +253,44 @@ export class SimulationEngine {
 
             case 'pricing_change':
                 if (typeof intervention.value === 'number') {
-                    this.state.pricingConfig.peakMultiplier = intervention.value;
-                    // Pricing affects demand
-                    const priceEffect = 1 - (intervention.value - 1) * 0.3; // 30% elasticity
+                    const priceMultiplier = intervention.value;
+                    this.state.pricingConfig.peakMultiplier = priceMultiplier;
+                    const priceEffect = 1 - (priceMultiplier - 1) * 0.3;
                     this.state.demandConfig.weatherMultiplier *= priceEffect;
+                }
+                break;
+
+            case 'schedule_maintenance':
+                if (intervention.stationId) {
+                    const station = this.state.stations.find((s) => s.id === intervention.stationId);
+                    if (station) {
+                        station.status = 'maintenance';
+                        station.activeChargers = Math.max(1, Math.floor(station.chargers * 0.3));
+                        this.addAlert('info', `${station.name} scheduled for maintenance`, station.id);
+                        this.rerouteFromStation(station.id);
+                    }
+                }
+                break;
+
+            case 'change_policy':
+                if (intervention.params) {
+                    const { safetyStock, rebalanceThreshold } = intervention.params as { safetyStock?: number; rebalanceThreshold?: number };
+                    if (safetyStock !== undefined) {
+                        this.state.inventoryConfig.safetyStock = safetyStock;
+                    }
+                    if (rebalanceThreshold !== undefined) {
+                        this.state.inventoryConfig.rebalanceThreshold = rebalanceThreshold;
+                    }
+                    // Apply inventory rebalancing immediately
+                    this.state.stations.forEach((station) => {
+                        if (station.status === 'offline' || station.status === 'fire' || station.status === 'power_outage') return;
+                        const threshold = this.state.inventoryConfig.safetyStock;
+                        if (station.currentInventory < threshold) {
+                            // Simulate emergency restocking
+                            station.currentInventory = Math.min(station.inventoryCap, threshold + 5);
+                            this.addAlert('info', `Restocked ${station.name} to safety level`, station.id);
+                        }
+                    });
                 }
                 break;
         }
@@ -194,13 +298,12 @@ export class SimulationEngine {
 
     private addAlert(type: 'info' | 'warning' | 'danger', message: string, stationId?: string): void {
         this.state.alerts.unshift({
-            id: `alert-${Date.now()}`,
+            id: `alert-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             type,
             message,
             stationId,
             timestamp: this.state.time,
         });
-        // Keep only last 10 alerts
         if (this.state.alerts.length > 10) {
             this.state.alerts.pop();
         }
@@ -240,6 +343,7 @@ export class SimulationEngine {
         return available.reduce((nearest, station) => {
             const distCurrent = this.calculateDistance(position, station.position);
             const distNearest = this.calculateDistance(position, nearest.position);
+            // Score considers distance + wait time penalty
             const scoreCurrent = distCurrent + station.avgWaitTime * 2;
             const scoreNearest = distNearest + nearest.avgWaitTime * 2;
             return scoreCurrent < scoreNearest ? station : nearest;
@@ -251,7 +355,8 @@ export class SimulationEngine {
     }
 
     private calculateETA(from: { x: number; y: number }, to: { x: number; y: number }): number {
-        return Math.ceil(this.calculateDistance(from, to) / 5);
+        const dist = this.calculateDistance(from, to);
+        return Math.max(1, Math.ceil(dist / DRIVER_SPEED));
     }
 
     step(): void {
@@ -264,18 +369,16 @@ export class SimulationEngine {
             this.state.day += 1;
         }
 
-        // Get current demand level
+        // Get current demand level using Poisson distribution
         const hourDemand = demandCurves[this.state.hour] * this.state.demandConfig.weatherMultiplier;
+        const lambda = hourDemand * 0.2 * (this.state.stations.length / 8); // Scale with station count
+        const requestCount = poissonRandom(lambda);
 
-        // Generate swap requests based on demand
-        if (Math.random() < hourDemand * 0.15) {
+        for (let i = 0; i < requestCount; i++) {
             this.generateSwapRequest();
         }
 
-        // Update drivers
         this.updateDrivers();
-
-        // Update stations
         this.updateStations();
 
         // Record time series data every 30 minutes
@@ -283,7 +386,9 @@ export class SimulationEngine {
             this.recordTimeSeriesPoint();
         }
 
-        // Recalculate KPIs
+        // Clean old swap timestamps (keep last 60 min)
+        this.recentSwaps = this.recentSwaps.filter(t => this.state.time - t <= 60);
+
         this.recalculateKPIs();
     }
 
@@ -293,30 +398,51 @@ export class SimulationEngine {
         );
         if (operational.length === 0) return;
 
-        const target = operational[Math.floor(Math.random() * operational.length)];
-        target.queueLength += 1;
+        // Smart station selection: pick nearest station from a random spawn point
+        const spawnX = Math.random() * 100;
+        const spawnY = Math.random() * 100;
+        const spawnPos = { x: spawnX, y: spawnY };
 
-        if (target.queueLength > target.bays * 1.5) {
+        // Score each station and pick the best (weighted random)
+        const scored = operational.map(s => ({
+            station: s,
+            score: this.calculateDistance(spawnPos, s.position) + s.avgWaitTime * 3,
+        }));
+        scored.sort((a, b) => a.score - b.score);
+
+        // Pick from top 3 with weighted probability (closer = more likely)
+        const topN = scored.slice(0, Math.min(3, scored.length));
+        const totalInverseScore = topN.reduce((sum, s) => sum + (1 / s.score), 0);
+        let rand = Math.random() * totalInverseScore;
+        let target = topN[0].station;
+        for (const s of topN) {
+            rand -= (1 / s.score);
+            if (rand <= 0) { target = s.station; break; }
+        }
+
+        target.queueLength += 1;
+        if (target.queueLength > target.bays * 1.5 && target.status === 'operational') {
             target.status = 'overloaded';
         }
 
-        // Add a new driver
         const newDriver: Driver = {
-            id: `driver-${Date.now()}`,
+            id: `driver-${this.state.time}-${Math.random().toString(36).slice(2, 6)}`,
             position: {
-                x: target.position.x + (Math.random() - 0.5) * 20,
-                y: target.position.y + (Math.random() - 0.5) * 20,
+                x: target.position.x + (Math.random() - 0.5) * 15,
+                y: target.position.y + (Math.random() - 0.5) * 15,
             },
             targetStationId: target.id,
             status: 'en_route',
-            eta: Math.ceil(Math.random() * 5) + 1,
-            batteryLevel: Math.random() < 0.2 ? 'critical' : Math.random() < 0.4 ? 'low' : 'normal',
+            eta: this.calculateETA(
+                { x: target.position.x + (Math.random() - 0.5) * 15, y: target.position.y + (Math.random() - 0.5) * 15 },
+                target.position
+            ),
+            batteryLevel: Math.random() < 0.15 ? 'critical' : Math.random() < 0.35 ? 'low' : 'normal',
         };
         this.state.drivers.push(newDriver);
 
-        // Limit drivers
-        if (this.state.drivers.length > 20) {
-            this.state.drivers = this.state.drivers.slice(-20);
+        if (this.state.drivers.length > MAX_DRIVERS) {
+            this.state.drivers = this.state.drivers.slice(-MAX_DRIVERS);
         }
     }
 
@@ -324,31 +450,57 @@ export class SimulationEngine {
         this.state.drivers.forEach((driver) => {
             if (driver.status === 'en_route' || driver.status === 'rerouting') {
                 driver.eta = Math.max(0, driver.eta - 1);
-                if (driver.eta === 0) {
-                    driver.status = 'swapping';
-                }
-                // Move towards target
+
+                // Linear movement toward target
                 const target = this.state.stations.find((s) => s.id === driver.targetStationId);
                 if (target) {
                     const dx = target.position.x - driver.position.x;
                     const dy = target.position.y - driver.position.y;
-                    driver.position.x += dx * 0.1;
-                    driver.position.y += dy * 0.1;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 0.5) {
+                        const step = Math.min(DRIVER_SPEED, dist);
+                        driver.position.x += (dx / dist) * step;
+                        driver.position.y += (dy / dist) * step;
+                    }
+                }
+
+                if (driver.eta === 0) {
+                    driver.status = 'swapping';
+                    driver.waitTime = 0;
+                }
+
+                // Battery drain while traveling
+                if (driver.batteryLevel === 'low' && Math.random() < 0.02) {
+                    driver.batteryLevel = 'critical';
                 }
             } else if (driver.status === 'swapping') {
-                if (Math.random() < 0.2) {
+                // Fixed swap duration: increment wait time, complete after AVG_SWAP_DURATION
+                driver.waitTime = (driver.waitTime || 0) + 1;
+                if (driver.waitTime >= AVG_SWAP_DURATION) {
                     driver.status = 'complete';
                     const station = this.state.stations.find((s) => s.id === driver.targetStationId);
-                    if (station && station.queueLength > 0) {
-                        station.queueLength -= 1;
+                    if (station) {
+                        station.queueLength = Math.max(0, station.queueLength - 1);
                         station.currentInventory = Math.max(0, station.currentInventory - 1);
                         station.totalSwaps += 1;
+                        this.recentSwaps.push(this.state.time);
                     }
+                }
+            } else if (driver.status === 'seeking') {
+                // Seeking drivers look for nearest station
+                const nearest = this.findNearestAvailableStation(driver.position, '');
+                if (nearest) {
+                    driver.targetStationId = nearest.id;
+                    driver.status = 'en_route';
+                    driver.eta = this.calculateETA(driver.position, nearest.position);
+                } else {
+                    driver.status = 'abandoned';
+                    this.state.scenarioKPIs.lostSwaps++;
                 }
             }
         });
 
-        // Remove completed drivers
+        // Remove completed and abandoned drivers
         this.state.drivers = this.state.drivers.filter(
             (d) => d.status !== 'complete' && d.status !== 'abandoned'
         );
@@ -356,28 +508,40 @@ export class SimulationEngine {
 
     private updateStations(): void {
         this.state.stations.forEach((station) => {
-            if (station.status === 'fire' || station.status === 'power_outage') {
-                return; // Skip offline stations
+            if (station.status === 'fire' || station.status === 'power_outage' || station.status === 'offline') {
+                return;
             }
 
             // Charge batteries
-            const chargeRate = station.activeChargers * 0.08;
-            if (station.chargingBatteries > 0 && Math.random() < chargeRate) {
-                station.currentInventory = Math.min(station.inventoryCap, station.currentInventory + 1);
-                station.chargingBatteries = Math.max(0, station.chargingBatteries - 1);
+            if (station.chargingBatteries > 0 && station.activeChargers > 0) {
+                const chargeProb = Math.min(0.95, station.activeChargers * 0.06);
+                if (Math.random() < chargeProb) {
+                    station.currentInventory = Math.min(station.inventoryCap, station.currentInventory + 1);
+                    station.chargingBatteries = Math.max(0, station.chargingBatteries - 1);
+                }
             }
 
             // Replenish charging queue
             if (station.chargingBatteries < station.activeChargers) {
-                const toCharge = station.inventoryCap - station.currentInventory - station.chargingBatteries;
-                station.chargingBatteries = Math.min(station.activeChargers, station.chargingBatteries + Math.floor(toCharge * 0.1));
+                const slotsAvailable = station.activeChargers - station.chargingBatteries;
+                const batteriesToCharge = station.inventoryCap - station.currentInventory - station.chargingBatteries;
+                if (batteriesToCharge > 0) {
+                    station.chargingBatteries += Math.min(slotsAvailable, Math.ceil(batteriesToCharge * 0.15));
+                }
             }
 
-            // Update wait time
-            station.avgWaitTime = Math.max(0.5, station.queueLength * 1.2 + Math.random());
+            // Update wait time using queuing model: (queue * swap_duration) / chargers
+            if (station.activeChargers > 0) {
+                station.avgWaitTime = Math.max(0.3,
+                    (station.queueLength * AVG_SWAP_DURATION) / station.activeChargers +
+                    (Math.random() * 0.4 - 0.2) // small noise
+                );
+            } else {
+                station.avgWaitTime = station.queueLength * AVG_SWAP_DURATION;
+            }
             station.peakQueueLength = Math.max(station.peakQueueLength, station.queueLength);
 
-            // Update utilization
+            // Update utilization: actual charger usage
             if (station.activeChargers > 0) {
                 station.utilizationRate = Math.min(0.99, station.chargingBatteries / station.activeChargers);
             }
@@ -385,10 +549,11 @@ export class SimulationEngine {
             // Status transitions
             if (station.status === 'operational' && station.currentInventory < 5) {
                 station.status = 'low_inventory';
+                this.addAlert('warning', `Low inventory at ${station.name}`, station.id);
             } else if (station.status === 'low_inventory' && station.currentInventory >= 10) {
                 station.status = 'operational';
             }
-            if (station.status === 'overloaded' && station.queueLength <= station.bays * 0.5) {
+            if (station.status === 'overloaded' && station.queueLength <= station.bays * 0.3) {
                 station.status = 'operational';
             }
         });
@@ -405,7 +570,6 @@ export class SimulationEngine {
         };
         this.state.timeSeriesData.push(point);
 
-        // Keep last 48 points (24 hours at 30min intervals)
         if (this.state.timeSeriesData.length > 48) {
             this.state.timeSeriesData.shift();
         }
@@ -416,12 +580,9 @@ export class SimulationEngine {
             (s) => s.status !== 'fire' && s.status !== 'power_outage' && s.status !== 'offline'
         );
 
-        if (operational.length === 0) {
-            return;
-        }
+        if (operational.length === 0) return;
 
         const totalWaitTime = operational.reduce((sum, s) => sum + s.avgWaitTime, 0);
-        const totalChargers = operational.reduce((sum, s) => sum + s.chargers, 0);
         const activeChargers = operational.reduce((sum, s) => sum + s.activeChargers, 0);
         const totalInventory = operational.reduce((sum, s) => sum + s.inventoryCap, 0);
         const currentInventory = operational.reduce((sum, s) => sum + s.currentInventory, 0);
@@ -429,25 +590,32 @@ export class SimulationEngine {
         const totalLostSwaps = operational.reduce((sum, s) => sum + s.lostSwaps, 0);
         const totalSwaps = operational.reduce((sum, s) => sum + s.totalSwaps, 0);
 
+        // Track actual throughput from recent swaps
+        const actualThroughput = this.recentSwaps.length > 0
+            ? Math.round(this.recentSwaps.length * (60 / Math.max(1, this.recentSwaps.length)))
+            : Math.floor((activeChargers * 60) / AVG_SWAP_DURATION);
+
         this.state.scenarioKPIs = {
             ...this.state.scenarioKPIs,
             avgWaitTime: totalWaitTime / operational.length,
-            lostSwaps: totalLostSwaps + Math.floor(this.state.drivers.filter(d => d.status === 'abandoned').length),
+            lostSwaps: totalLostSwaps + this.state.drivers.filter(d => d.status === 'abandoned').length,
             idleInventory: Math.max(0, totalInventory - currentInventory - chargingCount),
-            chargerUtilization: totalChargers > 0 ? activeChargers / totalChargers : 0,
+            chargerUtilization: activeChargers > 0 ? chargingCount / activeChargers : 0,
             operationalCost: this.calculateOperationalCost(operational),
-            cityThroughput: Math.floor((activeChargers * 60) / 4), // ~4 min per swap
-            revenue: totalSwaps * 150, // ₹150 per swap
+            cityThroughput: Math.max(actualThroughput, Math.floor((activeChargers * 60) / AVG_SWAP_DURATION * 0.7)),
+            revenue: totalSwaps * 150,
+            peakWaitTime: Math.max(...operational.map(s => s.avgWaitTime), 0),
+            averageQueueLength: operational.reduce((sum, s) => sum + s.queueLength, 0) / operational.length,
         };
     }
 
     private calculateOperationalCost(stations: Station[]): number {
         let cost = 0;
         stations.forEach((station) => {
-            cost += 5000; // Base station cost per day
-            cost += station.chargers * 500; // Per charger cost
-            cost += station.inventoryCap * 100; // Inventory holding cost
-            cost += station.activeChargers * 200; // Active usage cost
+            cost += 5000;  // Base station cost per day
+            cost += station.chargers * 500;  // Per charger cost
+            cost += station.inventoryCap * 100;  // Inventory holding cost
+            cost += station.activeChargers * 200;  // Active usage cost
         });
         return cost;
     }
@@ -460,5 +628,3 @@ export class SimulationEngine {
         this.state.speed = speed;
     }
 }
-
-export const simulationEngine = new SimulationEngine();
