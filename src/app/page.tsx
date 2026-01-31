@@ -503,26 +503,26 @@ export default function ControlCenter() {
             </div>
 
             {/* Scenario Tabs - 5 column grid */}
-            <div className="px-6 pb-5">
-              <div className="glass-card rounded-2xl p-5">
-                <div className="grid grid-cols-5 gap-4">
+            <div className="px-5 pb-3">
+              <div className="glass-card rounded-2xl p-3">
+                <div className="grid grid-cols-5 gap-2">
                   {SCENARIO_CATEGORIES.map((cat, index) => (
                     <button
                       key={cat.type}
                       onClick={() => !state.isRunning && handleScenarioChange(cat.type)}
                       disabled={state.isRunning}
                       title={cat.description}
-                      className={`scenario-tab group flex flex-col items-center gap-2.5 px-3 py-4 rounded-xl text-xs font-medium transition-all duration-300 ripple-effect
+                      className={`scenario-tab group flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-300 ripple-effect
                         ${activeScenarioType === cat.type
                           ? 'active text-white shadow-lg'
                           : 'text-slate-500 hover:text-slate-200 hover:bg-slate-700/40'}
                         ${state.isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
                       style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                      <span className={`text-xl transition-transform duration-300 ${activeScenarioType === cat.type ? 'animate-float' : 'group-hover:scale-110'}`}>
+                      <span className={`transition-transform duration-300 ${activeScenarioType === cat.type ? 'animate-float' : 'group-hover:scale-110'}`}>
                         {scenarioIcons[cat.type]}
                       </span>
-                      <span className="truncate max-w-full leading-tight text-center">{cat.label}</span>
+                      <span className="truncate max-w-full">{cat.label}</span>
                     </button>
                   ))}
                 </div>
@@ -530,7 +530,7 @@ export default function ControlCenter() {
             </div>
 
             {/* Scenario Controls */}
-            <div className="flex-1 px-6 py-6 overflow-y-auto">
+            <div className="flex-1 px-5 py-4 overflow-y-auto">
               {activeScenarioType === 'baseline' && (() => {
                 const operational = state.stations.filter(s => s.status === 'operational').length;
                 const totalStations = state.stations.length;
@@ -545,9 +545,9 @@ export default function ControlCenter() {
                 const lowStockStations = state.stations.filter(s => s.currentInventory / s.inventoryCap < 0.25).length;
 
                 return (
-                  <div className="space-y-7">
+                  <div className="space-y-4">
                     {/* Status banner with progress ring */}
-                    <div className={`relative flex items-center gap-5 p-5 rounded-2xl border overflow-hidden transition-all ${operational === totalStations
+                    <div className={`relative flex items-center gap-4 p-4 rounded-2xl border overflow-hidden transition-all ${operational === totalStations
                       ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'
                       : operational > totalStations * 0.7
                         ? 'bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/30'
@@ -592,37 +592,37 @@ export default function ControlCenter() {
                     </div>
 
                     {/* Stats grid with glass cards */}
-                    <div className="grid grid-cols-2 gap-5">
-                      <div className="glass-card rounded-xl p-5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '4px solid #10b981' }}>
-                        <div className="text-xs text-slate-500 mb-3 flex items-center gap-2">
-                          <MapPin size={14} className="text-emerald-400" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #10b981' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <MapPin size={12} className="text-emerald-400" />
                           Stations Online
                         </div>
                         <div className="text-2xl font-bold text-emerald-400 tabular-nums">
-                          {operational}<span className="text-sm text-slate-600 font-medium ml-0.5">/{totalStations}</span>
+                          {operational}<span className="text-sm text-slate-600 font-medium">/{totalStations}</span>
                         </div>
                       </div>
-                      <div className="glass-card rounded-xl p-5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '4px solid #3b82f6' }}>
-                        <div className="text-xs text-slate-500 mb-3 flex items-center gap-2">
-                          <Zap size={14} className="text-blue-400" />
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #3b82f6' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <Zap size={12} className="text-blue-400" />
                           Active Chargers
                         </div>
                         <div className="text-2xl font-bold text-blue-400 tabular-nums">
-                          {activeChargers}<span className="text-sm text-slate-600 font-medium ml-0.5">/{totalChargers}</span>
+                          {activeChargers}<span className="text-sm text-slate-600 font-medium">/{totalChargers}</span>
                         </div>
                       </div>
-                      <div className="glass-card rounded-xl p-5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '4px solid #f59e0b' }}>
-                        <div className="text-xs text-slate-500 mb-3 flex items-center gap-2">
-                          <Activity size={14} className="text-amber-400" />
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #f59e0b' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <Activity size={12} className="text-amber-400" />
                           Avg Utilization
                         </div>
                         <div className={`text-2xl font-bold tabular-nums ${avgUtil > 85 ? 'text-red-400' : avgUtil > 65 ? 'text-amber-400' : 'text-emerald-400'}`}>
                           {avgUtil.toFixed(1)}<span className="text-sm">%</span>
                         </div>
                       </div>
-                      <div className="glass-card rounded-xl p-5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '4px solid #22d3ee' }}>
-                        <div className="text-xs text-slate-500 mb-3 flex items-center gap-2">
-                          <Clock size={14} className="text-cyan-400" />
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #22d3ee' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <Clock size={12} className="text-cyan-400" />
                           Avg Wait Time
                         </div>
                         <div className={`text-2xl font-bold tabular-nums ${avgWait > 8 ? 'text-red-400' : avgWait > 4 ? 'text-amber-400' : 'text-emerald-400'}`}>
@@ -632,13 +632,13 @@ export default function ControlCenter() {
                     </div>
 
                     {/* Inventory bar with premium styling */}
-                    <div className="glass-card rounded-xl p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm text-slate-300 flex items-center gap-3 font-medium">
-                          <Battery size={20} className="text-emerald-400 animate-float" />
+                    <div className="glass-card rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm text-slate-300 flex items-center gap-2 font-medium">
+                          <Battery size={16} className="text-emerald-400 animate-float" />
                           Battery Inventory
                         </span>
-                        <span className={`text-xl font-bold tabular-nums ${inventoryPct < 25 ? 'text-red-400' : inventoryPct < 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        <span className={`text-lg font-bold tabular-nums ${inventoryPct < 25 ? 'text-red-400' : inventoryPct < 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
                           {inventoryPct.toFixed(0)}%
                         </span>
                       </div>
@@ -648,11 +648,11 @@ export default function ControlCenter() {
                           style={{ width: `${inventoryPct}%`, boxShadow: inventoryPct < 25 ? '0 0 12px rgba(239, 68, 68, 0.4)' : inventoryPct < 50 ? '0 0 12px rgba(245, 158, 11, 0.4)' : '0 0 12px rgba(16, 185, 129, 0.4)' }}
                         />
                       </div>
-                      <div className="flex justify-between mt-4">
+                      <div className="flex justify-between mt-2.5">
                         <span className="text-xs text-slate-500">{totalInventory.toLocaleString()} / {totalCap.toLocaleString()} batteries</span>
                         {lowStockStations > 0 && (
-                          <span className="text-xs text-amber-400 flex items-center gap-1.5 animate-pulse">
-                            <AlertTriangle size={12} />
+                          <span className="text-xs text-amber-400 flex items-center gap-1 animate-pulse">
+                            <AlertTriangle size={11} />
                             {lowStockStations} low stock
                           </span>
                         )}
@@ -660,19 +660,19 @@ export default function ControlCenter() {
                     </div>
 
                     {/* Total swaps with neon styling */}
-                    <div className="glass-card rounded-xl p-6 flex items-center justify-between group hover:border-purple-500/30 transition-colors mt-4">
-                      <span className="text-sm text-slate-400 flex items-center gap-4 font-medium">
-                        <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                          <Zap size={20} className="text-purple-400 group-hover:animate-float" />
+                    <div className="glass-card rounded-xl p-4 flex items-center justify-between group hover:border-purple-500/30 transition-colors">
+                      <span className="text-sm text-slate-400 flex items-center gap-2.5 font-medium">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                          <Zap size={16} className="text-purple-400 group-hover:animate-float" />
                         </div>
                         Total Swaps
                       </span>
-                      <span className="text-3xl font-bold tabular-nums text-white" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.4)' }}>
+                      <span className="text-2xl font-bold tabular-nums text-white" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.4)' }}>
                         {totalSwaps.toLocaleString()}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-600 text-center pt-3">
+                    <p className="text-xs text-slate-600 text-center pt-1">
                       Select a scenario above to test interventions
                     </p>
                   </div>
