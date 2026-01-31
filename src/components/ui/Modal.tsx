@@ -109,23 +109,21 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'md' }: Sl
     };
 
     return (
-        <div
-            className={`
-        fixed inset-0 z-50
-        transition-opacity duration-300
-        ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-      `}
-        >
-            {/* Backdrop */}
+        <>
+            {/* Backdrop — no blur, just a dim overlay */}
             <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                className={`
+          fixed inset-0 z-[60] bg-black/30
+          transition-opacity duration-300
+          ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+        `}
                 onClick={onClose}
             />
 
             {/* Panel */}
             <div
                 className={`
-          absolute top-0 right-0 h-full w-full ${widths[width]}
+          fixed top-0 right-0 h-full w-full ${widths[width]} z-[61]
           bg-slate-900 border-l border-slate-800
           shadow-2xl
           transform transition-transform duration-300 ease-out
@@ -133,19 +131,19 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'md' }: Sl
         `}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-                    <h2 className="text-lg font-semibold text-slate-200">{title || 'Details'}</h2>
+                <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800">
+                    <h2 className="text-lg font-semibold text-slate-200 truncate pr-4">{title || 'Details'}</h2>
                     <button
                         onClick={onClose}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                        className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors flex-shrink-0"
                     >
-                        <X size={18} />
+                        <X size={20} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto h-[calc(100%-4rem)]">{children}</div>
+                <div className="p-6 overflow-y-auto h-[calc(100%-4.5rem)]">{children}</div>
             </div>
-        </div>
+        </>
     );
 }

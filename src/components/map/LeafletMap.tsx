@@ -199,6 +199,30 @@ function createStationPopup(station: Station): string {
                     </div>
                     <div style="font-weight: 700; font-size: 16px; color: ${utilizationColor};">${(station.utilizationRate * 100).toFixed(0)}<span style="font-size: 11px; font-weight: 500; color: #64748b;">%</span></div>
                 </div>
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 10px; border-left: 3px solid #a78bfa;">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        Queue
+                    </div>
+                    <div style="font-weight: 700; font-size: 16px; color: #a78bfa;">${station.queueLength}</div>
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 10px; border-left: 3px solid #06b6d4;">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2">
+                            <path d="M17 1l4 4-4 4"></path>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                            <path d="M7 23l-4-4 4-4"></path>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                        </svg>
+                        Swaps
+                    </div>
+                    <div style="font-weight: 700; font-size: 16px; color: #06b6d4;">${station.totalSwaps}<span style="font-size: 11px; font-weight: 500; color: #ef4444; margin-left: 4px;">/ ${station.lostSwaps} lost</span></div>
+                </div>
             </div>
             
             <!-- Inventory Progress Bar -->

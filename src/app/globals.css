@@ -277,9 +277,8 @@ a {
   text-decoration: none;
 }
 
-/* Button reset */
+/* Button reset — only reset defaults, don't override background so Tailwind utilities work */
 button {
-  background: none;
   border: none;
   cursor: pointer;
   font: inherit;

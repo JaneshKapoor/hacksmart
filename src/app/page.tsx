@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useSimulation } from '@/hooks/useSimulation';
 import type { WeatherData, CarbonData } from '@/simulation/types';
 import { LeafletMap } from '@/components/map';
-import { SlideOver } from '@/components/ui/Modal';
 import { Station, ScenarioType, SCENARIO_CATEGORIES, WEATHER_OPTIONS, FAILURE_TYPES } from '@/simulation/types';
 import { fetchRealStations } from '@/lib/stationAdapter';
 import {
@@ -20,7 +19,6 @@ type DataMode = 'simulation' | 'real';
 export default function ControlCenter() {
   const router = useRouter();
   const { state, start, pause, reset, setSpeed, setScenario, applyInterventions, loadStations, weatherData, carbonData } = useSimulation();
-  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [activeScenarioType, setActiveScenarioType] = useState<ScenarioType>('baseline');
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
   const [dataMode, setDataMode] = useState<DataMode>('simulation');
@@ -68,9 +66,6 @@ export default function ControlCenter() {
       case 'Digit2': setSpeed(2); break;
       case 'Digit3': setSpeed(4); break;
       case 'Digit4': setSpeed(8); break;
-      case 'Escape':
-        setSelectedStation(null);
-        break;
     }
   }, [state?.isRunning, start, pause, reset, setSpeed]);
 
@@ -329,30 +324,30 @@ export default function ControlCenter() {
             <div className="h-8 w-px bg-slate-700/50" />
 
             {/* Play/Pause/Reset */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {!state.isRunning ? (
                 <button
                   onClick={start}
-                  className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl font-semibold text-sm hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
+                  className="group flex items-center gap-3 px-9 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-2xl font-bold text-lg hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Play size={16} className="group-hover:animate-pulse" />
+                  <Play size={22} className="group-hover:animate-pulse" />
                   Run
                 </button>
               ) : (
                 <button
                   onClick={pause}
-                  className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl font-semibold text-sm hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98]"
+                  className="group flex items-center gap-3 px-9 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl font-bold text-lg hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Pause size={16} className="group-hover:animate-pulse" />
+                  <Pause size={22} className="group-hover:animate-pulse" />
                   Pause
                 </button>
               )}
               <button
                 onClick={reset}
-                className="group p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 transition-all border border-slate-700/50 hover:border-slate-600 hover:scale-[1.05] active:scale-[0.95]"
+                className="group p-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 transition-all border border-slate-700/50 hover:border-slate-600 hover:scale-[1.05] active:scale-[0.95]"
                 title="Reset (R)"
               >
-                <RotateCcw size={16} className="group-hover:rotate-[-180deg] transition-transform duration-500" />
+                <RotateCcw size={22} className="group-hover:rotate-[-180deg] transition-transform duration-500" />
               </button>
             </div>
           </div>
@@ -1133,13 +1128,12 @@ export default function ControlCenter() {
         </div>
 
         {/* Map Panel */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative isolate">
           {/* Map */}
           <div className="h-full w-full">
             <LeafletMap
               stations={state.stations}
               drivers={state.drivers}
-              onStationClick={setSelectedStation}
               showConnections={true}
               showDrivers={true}
             />
@@ -1193,91 +1187,6 @@ export default function ControlCenter() {
         </div>
       </div>
 
-      {/* Station Details SlideOver */}
-      <SlideOver
-        isOpen={selectedStation !== null}
-        onClose={() => setSelectedStation(null)}
-        title={selectedStation?.name}
-        width="md"
-      >
-        {selectedStation && (
-          <div className="space-y-5">
-            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
-              ${selectedStation.status === 'operational' ? 'bg-emerald-500/15 text-emerald-400' :
-                selectedStation.status === 'fire' ? 'bg-red-500/15 text-red-400' :
-                  'bg-amber-500/15 text-amber-400'}`}>
-              <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-              {selectedStation.status.replace('_', ' ').toUpperCase()}
-            </div>
-
-            <div className="flex items-center gap-2 text-slate-400 text-sm">
-              <MapPin size={16} />
-              <span>{selectedStation.location}</span>
-              {selectedStation.geoPosition && (
-                <span className="text-xs text-slate-600">
-                  ({selectedStation.geoPosition.lat.toFixed(4)}, {selectedStation.geoPosition.lng.toFixed(4)})
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-800/50 rounded-xl p-3.5">
-                <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-                  <Clock size={13} /> Wait Time
-                </div>
-                <div className="text-2xl font-bold">
-                  {selectedStation.avgWaitTime.toFixed(1)}<span className="text-sm text-slate-400">m</span>
-                </div>
-              </div>
-              <div className="bg-slate-800/50 rounded-xl p-3.5">
-                <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-                  <Users size={13} /> Queue
-                </div>
-                <div className="text-2xl font-bold">{selectedStation.queueLength}</div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-400">Battery Inventory</span>
-                <span className="text-white font-medium">
-                  {selectedStation.currentInventory} / {selectedStation.inventoryCap}
-                </span>
-              </div>
-              <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${selectedStation.currentInventory / selectedStation.inventoryCap < 0.2 ? 'bg-red-500' :
-                    selectedStation.currentInventory / selectedStation.inventoryCap < 0.5 ? 'bg-amber-500' :
-                      'bg-emerald-500'}`}
-                  style={{ width: `${(selectedStation.currentInventory / selectedStation.inventoryCap) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700">
-              <div>
-                <span className="text-slate-500 text-sm block mb-0.5">Total Swaps</span>
-                <span className="text-xl font-bold">{selectedStation.totalSwaps}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 text-sm block mb-0.5">Lost Swaps</span>
-                <span className="text-xl font-bold text-red-400">{selectedStation.lostSwaps}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 text-sm block mb-0.5">Chargers</span>
-                <span className="text-xl font-bold">{selectedStation.activeChargers}/{selectedStation.chargers}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 text-sm block mb-0.5">Utilization</span>
-                <span className={`text-xl font-bold ${selectedStation.utilizationRate > 0.9 ? 'text-red-400' :
-                  selectedStation.utilizationRate > 0.7 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  {(selectedStation.utilizationRate * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </SlideOver>
     </div>
   );
 }
