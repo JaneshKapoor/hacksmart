@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
     title: 'ElectriGo - Battery Swap Network Digital Twin',
@@ -23,7 +24,9 @@ export default function RootLayout({
                 />
             </head>
             <body>
-                {children}
+                <Providers>
+                    {children}
+                </Providers>
             </body>
         </html>
     );
