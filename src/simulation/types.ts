@@ -42,6 +42,7 @@ export interface Station {
 
 export interface Driver {
     id: string;
+    name: string;
     position: Position;
     geoPosition: GeoPosition;
     state: DriverState;
@@ -49,6 +50,8 @@ export interface Driver {
     batteryLevel: number;
     waitTime: number;
     travelTime: number;
+    owedAmount: number;
+    swapsToday: number;
 }
 
 export interface KPIs {
@@ -80,7 +83,7 @@ export interface CarbonData {
     timestamp: string;
 }
 
-export type ScenarioType = 
+export type ScenarioType =
     | 'baseline'
     | 'station-ops'
     | 'capacity'

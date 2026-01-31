@@ -119,6 +119,7 @@ export class SimulationEngine {
 
             const driver: Driver = {
                 id: generateDriverId(),
+                name: `Rider #${Math.floor(Math.random() * 9000) + 1000}`,
                 position: pos,
                 geoPosition: geoPos,
                 state: 'idle',
@@ -126,6 +127,8 @@ export class SimulationEngine {
                 batteryLevel: 10 + Math.random() * 30, // 10-40%
                 waitTime: 0,
                 travelTime: 0,
+                owedAmount: Math.floor(Math.random() * 500),
+                swapsToday: Math.floor(Math.random() * 5),
             };
 
             // Select target station
@@ -277,6 +280,7 @@ export class SimulationEngine {
 
             const driver: Driver = {
                 id: generateDriverId(),
+                name: `Rider #${Math.floor(Math.random() * 9000) + 1000}`,
                 position: pos,
                 geoPosition: geoPos,
                 state: 'idle',
@@ -284,6 +288,8 @@ export class SimulationEngine {
                 batteryLevel: 10 + Math.random() * 30, // 10-40%
                 waitTime: 0,
                 travelTime: 0,
+                owedAmount: Math.floor(Math.random() * 500),
+                swapsToday: Math.floor(Math.random() * 5),
             };
 
             // Select target station
