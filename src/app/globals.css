@@ -277,6 +277,15 @@ input[type="range"]:focus {
   50% { opacity: 0.7; transform: scale(1.1); }
 }
 
+@keyframes blink-colon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink-colon {
+  animation: blink-colon 1s step-end infinite;
+}
+
 /* Range input styling */
 input[type="range"] {
   -webkit-appearance: none;

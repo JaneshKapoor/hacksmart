@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSimulation } from '@/hooks/useSimulation';
+import type { WeatherData, CarbonData } from '@/simulation/types';
 import { LeafletMap } from '@/components/map';
 import { SlideOver } from '@/components/ui/Modal';
 import { Station, ScenarioType, SCENARIO_CATEGORIES, WEATHER_OPTIONS, FAILURE_TYPES } from '@/simulation/types';
@@ -18,7 +19,7 @@ type DataMode = 'simulation' | 'real';
 
 export default function ControlCenter() {
   const router = useRouter();
-  const { state, start, pause, reset, setSpeed, setScenario, applyInterventions, loadStations } = useSimulation();
+  const { state, start, pause, reset, setSpeed, setScenario, applyInterventions, loadStations, weatherData, carbonData } = useSimulation();
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [activeScenarioType, setActiveScenarioType] = useState<ScenarioType>('baseline');
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
@@ -119,12 +120,12 @@ export default function ControlCenter() {
     );
   }
 
-  const formatTime = (minutes: number) => {
+  const formatTimeParts = (minutes: number) => {
     const hours = Math.floor(minutes / 60) % 24;
     const mins = minutes % 60;
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const displayHours = hours % 12 || 12;
-    return `${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`;
+    return { hours: String(displayHours), mins: mins.toString().padStart(2, '0'), ampm };
   };
 
   const handleScenarioChange = (type: ScenarioType) => {
@@ -310,7 +311,7 @@ export default function ControlCenter() {
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
       <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
-        <div className="px-6 py-3 flex items-center justify-between">
+        <div className="px-6 py-3 grid grid-cols-[auto_1fr_auto] items-center gap-4">
           {/* Left: Logo + Sim Controls */}
           <div className="flex items-center gap-5">
             <div className="flex items-center gap-3">
@@ -357,12 +358,14 @@ export default function ControlCenter() {
           </div>
 
           {/* Center: Time + Speed */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center justify-center gap-6">
             <div className="flex items-center gap-3">
               <span className={`px-2.5 py-1 rounded text-xs font-bold tracking-wide ${state.isRunning ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
                 {state.isRunning ? 'LIVE' : 'PAUSED'}
               </span>
-              <span className="text-xl font-bold font-mono tabular-nums">{formatTime(state.time)}</span>
+              <span className="text-xl font-bold font-mono tabular-nums">
+                {(() => { const t = formatTimeParts(state.time); return (<>{t.hours}<span className={state.isRunning ? 'animate-blink-colon' : ''}>{':'}</span>{t.mins} {t.ampm}</>); })()}
+              </span>
               <span className="text-sm text-slate-500">Day {state.day}</span>
             </div>
 
@@ -372,7 +375,7 @@ export default function ControlCenter() {
               {[1, 2, 4, 8].map((s) => (
                 <button
                   key={s}
-                  onClick={() => setSpeed(s)}
+                  onClick={() => { setSpeed(s); if (!state.isRunning) { /* speed stored for next start */ } }}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${state.speed === s ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}
                 >
                   {s}x
@@ -381,8 +384,39 @@ export default function ControlCenter() {
             </div>
           </div>
 
-          {/* Right: Data Mode + Analytics */}
+          {/* Right: Badges + Data Mode + Analytics */}
           <div className="flex items-center gap-3">
+            {/* Weather Badge */}
+            {weatherData && (
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${
+                weatherData.isFallback
+                  ? 'bg-slate-800/50 border-slate-700/50 text-slate-500'
+                  : 'bg-sky-500/10 border-sky-500/30 text-sky-300'
+              }`}>
+                <Cloud size={13} />
+                <span>{weatherData.temperature.toFixed(0)}°C</span>
+                <span className="text-slate-500">|</span>
+                <span>{weatherData.condition.replace('_', ' ')}</span>
+                {weatherData.multiplier > 1 && (
+                  <span className="text-amber-400">{weatherData.multiplier}x</span>
+                )}
+              </div>
+            )}
+
+            {/* Carbon Badge */}
+            {carbonData && (
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${
+                carbonData.isFallback
+                  ? 'bg-slate-800/50 border-slate-700/50 text-slate-500'
+                  : (carbonData.carbonIntensity > 800)
+                    ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              }`}>
+                <Zap size={13} />
+                <span>{carbonData.carbonIntensity} gCO2</span>
+              </div>
+            )}
+
             <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700/50 p-0.5">
               <button
                 onClick={() => handleDataModeChange('simulation')}

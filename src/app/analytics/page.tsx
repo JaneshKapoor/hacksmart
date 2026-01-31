@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import {
     ArrowLeft, TrendingUp, TrendingDown, Zap, MapPin,
     Play, AlertTriangle, Clock, BarChart3, Info, Activity,
-    Download, FileJson, FileSpreadsheet, Users, Battery, DollarSign
+    Download, FileJson, FileSpreadsheet, Users, Battery, DollarSign,
+    Leaf, CloudRain
 } from 'lucide-react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -80,6 +81,7 @@ export default function AnalyticsPage() {
         { metric: 'Charger Utilization', baseline: state.baselineKPIs.chargerUtilization * 100, scenario: state.scenarioKPIs.chargerUtilization * 100, unit: '%', inverse: false, icon: Zap },
         { metric: 'City Throughput', baseline: state.baselineKPIs.cityThroughput, scenario: state.scenarioKPIs.cityThroughput, unit: '/hr', inverse: false, icon: TrendingUp },
         { metric: 'Operational Cost', baseline: state.baselineKPIs.operationalCost / 1000, scenario: state.scenarioKPIs.operationalCost / 1000, unit: 'K/day', inverse: true, icon: DollarSign },
+        { metric: 'Carbon/Swap', baseline: (state.baselineKPIs.carbonFootprintPerSwap ?? 2520) / 1000, scenario: (state.scenarioKPIs.carbonFootprintPerSwap ?? 2520) / 1000, unit: 'kgCO2', inverse: true, icon: Leaf },
     ];
 
     // Network health summary
@@ -135,6 +137,13 @@ export default function AnalyticsPage() {
             type: 'warning',
             title: 'High Charger Utilization',
             description: `Network charger utilization at ${(state.scenarioKPIs.chargerUtilization * 100).toFixed(0)}%. Approaching capacity limits.`,
+        });
+    }
+    if ((state.scenarioKPIs.carbonIntensity ?? 0) > 800) {
+        insights.push({
+            type: 'warning',
+            title: 'High Grid Carbon Intensity',
+            description: `Grid carbon intensity is ${state.scenarioKPIs.carbonIntensity} gCO2/kWh. Consider scheduling charging during off-peak hours for lower emissions.`,
         });
     }
     if (insights.length === 0) {
@@ -221,7 +230,7 @@ export default function AnalyticsPage() {
 
             <main className="p-5">
                 {/* Network Health Summary Strip */}
-                <div className="grid grid-cols-6 gap-3 mb-5">
+                <div className="grid grid-cols-4 xl:grid-cols-8 gap-3 mb-5">
                     {[
                         { label: 'Stations', value: `${operationalCount}/${state.stations.length}`, icon: MapPin, color: 'text-blue-400' },
                         { label: 'Chargers', value: `${activeChargers}/${totalChargers}`, icon: Zap, color: 'text-amber-400' },
@@ -229,6 +238,8 @@ export default function AnalyticsPage() {
                         { label: 'Active Drivers', value: state.drivers.length.toString(), icon: Users, color: 'text-cyan-400' },
                         { label: 'Battery Stock', value: `${Math.round((totalInventory / totalCapacity) * 100)}%`, icon: Battery, color: 'text-purple-400' },
                         { label: 'Revenue', value: `₹${((state.scenarioKPIs.revenue || 0) / 1000).toFixed(0)}K`, icon: DollarSign, color: 'text-emerald-400' },
+                        { label: 'Elec. Rate', value: `₹${(state.scenarioKPIs.electricityCost ?? 0).toFixed(1)}/min`, icon: CloudRain, color: 'text-yellow-400' },
+                        { label: 'Carbon/Swap', value: `${((state.scenarioKPIs.carbonFootprintPerSwap ?? 0) / 1000).toFixed(1)}kg`, icon: Leaf, color: 'text-green-400' },
                     ].map((item) => {
                         const Icon = item.icon;
                         return (

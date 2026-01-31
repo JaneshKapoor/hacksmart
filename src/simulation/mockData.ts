@@ -2,12 +2,30 @@
 
 import { Station, Driver, KPIMetrics, DemandConfig, PricingConfig, InventoryConfig } from './types';
 
+// IEX Day-Ahead Market wholesale price curve (Rs/kWh) — 24 hourly values based on published IEX DAM patterns
+export const IEX_WHOLESALE_PRICE_CURVE: number[] = [
+    3.2, 2.8, 2.5, 2.3, 2.4, 3.0, 4.5, 6.0, 7.2, 6.8,
+    6.2, 5.8, 5.5, 5.2, 5.0, 5.3, 6.0, 7.5, 8.5, 8.0,
+    7.0, 5.5, 4.2, 3.5,
+];
+
+// Delhi Time-of-Day tariff multipliers — 24 hourly values
+export const DELHI_TOD_MULTIPLIERS: number[] = [
+    0.75, 0.75, 0.75, 0.75, 0.75, 0.85, 1.0, 1.2, 1.3, 1.2,
+    1.1, 1.0, 1.0, 1.0, 1.0, 1.1, 1.2, 1.4, 1.5, 1.4,
+    1.2, 1.0, 0.85, 0.75,
+];
+
+// Charger power in kW (DC fast charger)
+export const CHARGER_POWER_KW = 50;
+
 export const initialStations: Station[] = [
     {
         id: 'station-1',
         name: 'Central Hub',
         location: 'Connaught Place',
         position: { x: 50, y: 45 },
+        geoPosition: { lat: 28.6315, lng: 77.2167 },
         chargers: 12,
         activeChargers: 12,
         chargerType: 'mixed',
@@ -30,6 +48,7 @@ export const initialStations: Station[] = [
         name: 'North Terminal',
         location: 'Civil Lines',
         position: { x: 45, y: 20 },
+        geoPosition: { lat: 28.6814, lng: 77.2226 },
         chargers: 8,
         activeChargers: 8,
         chargerType: 'standard',
@@ -52,6 +71,7 @@ export const initialStations: Station[] = [
         name: 'East Gateway',
         location: 'Laxmi Nagar',
         position: { x: 78, y: 35 },
+        geoPosition: { lat: 28.6304, lng: 77.2772 },
         chargers: 10,
         activeChargers: 10,
         chargerType: 'fast',
@@ -74,6 +94,7 @@ export const initialStations: Station[] = [
         name: 'South Plaza',
         location: 'Saket',
         position: { x: 40, y: 75 },
+        geoPosition: { lat: 28.5244, lng: 77.2066 },
         chargers: 6,
         activeChargers: 6,
         chargerType: 'standard',
@@ -96,6 +117,7 @@ export const initialStations: Station[] = [
         name: 'West Junction',
         location: 'Janakpuri',
         position: { x: 18, y: 50 },
+        geoPosition: { lat: 28.6219, lng: 77.0878 },
         chargers: 8,
         activeChargers: 8,
         chargerType: 'mixed',
@@ -118,6 +140,7 @@ export const initialStations: Station[] = [
         name: 'Airport Express',
         location: 'IGI Airport',
         position: { x: 85, y: 65 },
+        geoPosition: { lat: 28.5562, lng: 77.1000 },
         chargers: 15,
         activeChargers: 15,
         chargerType: 'fast',
@@ -140,6 +163,7 @@ export const initialStations: Station[] = [
         name: 'Tech Park',
         location: 'Noida Sector 62',
         position: { x: 65, y: 55 },
+        geoPosition: { lat: 28.6270, lng: 77.3653 },
         chargers: 10,
         activeChargers: 7,
         chargerType: 'fast',
@@ -162,6 +186,7 @@ export const initialStations: Station[] = [
         name: 'University District',
         location: 'North Campus',
         position: { x: 30, y: 30 },
+        geoPosition: { lat: 28.6862, lng: 77.2095 },
         chargers: 6,
         activeChargers: 6,
         chargerType: 'standard',

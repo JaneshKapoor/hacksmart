@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Station, Driver } from '@/simulation/types';
+import { percentToGeo as percentToGeoUtil } from '@/lib/geoUtils';
 
 interface LeafletMapProps {
     stations: Station[];
@@ -284,15 +285,8 @@ export default function LeafletMap({
     );
 }
 
-// Convert percentage-based positions back to approximate geo coordinates
+// Wrapper to convert geoUtils output to Leaflet [lat, lng] tuple
 function percentToGeo(x: number, y: number): [number, number] {
-    const BOUNDS = {
-        north: 28.88,
-        south: 28.35,
-        east: 77.55,
-        west: 76.85,
-    };
-    const lat = BOUNDS.north - (y / 100) * (BOUNDS.north - BOUNDS.south);
-    const lng = BOUNDS.west + (x / 100) * (BOUNDS.east - BOUNDS.west);
+    const { lat, lng } = percentToGeoUtil(x, y);
     return [lat, lng];
 }
