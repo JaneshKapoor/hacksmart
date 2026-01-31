@@ -1,32 +1,30 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { SimulationProvider } from "@/contexts/SimulationContext";
-import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-});
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "ElectriGo | Digital Twin Simulation",
-  description: "Digital twin simulation of a city's battery swap station network. Run what-if experiments to optimize operations.",
-  keywords: ["digital twin", "simulation", "battery swap", "EV charging", "network optimization"],
+    title: 'ElectriGo - Battery Swap Network Digital Twin',
+    description: 'Real-time simulation platform for testing scenarios on a battery swap station network',
+    keywords: ['EV', 'battery swap', 'digital twin', 'simulation', 'charging network'],
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en" className={inter.variable}>
-      <body className={inter.className}>
-        <SimulationProvider>
-          {children}
-        </SimulationProvider>
-      </body>
-    </html>
-  );
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <html lang="en">
+            <head>
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                <link
+                    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+                    rel="stylesheet"
+                />
+            </head>
+            <body>
+                {children}
+            </body>
+        </html>
+    );
 }
