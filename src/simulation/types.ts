@@ -115,6 +115,37 @@ export interface GrowthConfig {
     distribution: 'uniform' | 'area_specific';
 }
 
+export interface WeatherData {
+    multiplier: number;
+    condition: string;
+    description: string;
+    temperature: number;
+    isFallback: boolean;
+}
+
+export interface CarbonData {
+    carbonIntensity: number;
+    zone: string;
+    isFallback: boolean;
+    timestamp: string;
+}
+
+export interface ElectricityCostBreakdown {
+    baseStationCost: number;
+    chargerMaintenance: number;
+    inventoryHolding: number;
+    electricityCost: number;
+    effectiveRate: number;
+    totalCost: number;
+}
+
+export interface RoutingMatrix {
+    distances: number[][] | null;
+    durations: number[][] | null;
+    stationIds: string[];
+    fallback: boolean;
+}
+
 export interface KPIMetrics {
     avgWaitTime: number;
     lostSwaps: number;
@@ -127,6 +158,10 @@ export interface KPIMetrics {
     revenue?: number;
     peakWaitTime?: number;
     averageQueueLength?: number;
+    electricityCost?: number;
+    carbonIntensity?: number;
+    carbonFootprintPerSwap?: number;
+    totalCarbonFootprint?: number;
 }
 
 export interface TimeSeriesPoint {
@@ -155,6 +190,9 @@ export interface SimulationState {
     pricingConfig: PricingConfig;
     inventoryConfig: InventoryConfig;
     alerts: SimulationAlert[];
+    weatherData?: WeatherData;
+    carbonData?: CarbonData;
+    routingMatrix?: RoutingMatrix;
 }
 
 export interface SimulationAlert {

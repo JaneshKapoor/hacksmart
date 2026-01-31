@@ -8,8 +8,10 @@ import {
 import {
     initialStations, initialDrivers, baselineKPIs,
     defaultDemandConfig, defaultPricingConfig, defaultInventoryConfig,
-    demandCurves
+    demandCurves, IEX_WHOLESALE_PRICE_CURVE, DELHI_TOD_MULTIPLIERS, CHARGER_POWER_KW
 } from './mockData';
+import type { WeatherData, CarbonData, RoutingMatrix } from './types';
+import { haversine, percentToGeo } from '@/lib/geoUtils';
 
 export interface EngineConfig {
     stations?: Station[];
@@ -36,6 +38,8 @@ export class SimulationEngine {
     private state: SimulationState;
     private config: EngineConfig;
     private recentSwaps: number[] = []; // timestamps of recent completed swaps
+    private _lastElectricityCost: number = 0;
+    private _lastEffectiveRate: number = 0;
 
     constructor(config?: EngineConfig) {
         this.config = config || {};
@@ -52,10 +56,15 @@ export class SimulationEngine {
 
         const computedBaseline = this.computeBaselineKPIs(stations);
 
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const timeInMinutes = currentHour * 60 + currentMinute;
+
         return {
-            time: 480, // 8:00 AM
+            time: timeInMinutes,
             day: 1,
-            hour: 8,
+            hour: currentHour,
             stations,
             drivers,
             baselineKPIs: computedBaseline,
@@ -341,13 +350,48 @@ export class SimulationEngine {
         if (available.length === 0) return null;
 
         return available.reduce((nearest, station) => {
-            const distCurrent = this.calculateDistance(position, station.position);
-            const distNearest = this.calculateDistance(position, nearest.position);
-            // Score considers distance + wait time penalty
+            const distCurrent = this.getDistanceMetric(position, station);
+            const distNearest = this.getDistanceMetric(position, nearest);
             const scoreCurrent = distCurrent + station.avgWaitTime * 2;
             const scoreNearest = distNearest + nearest.avgWaitTime * 2;
             return scoreCurrent < scoreNearest ? station : nearest;
         });
+    }
+
+    /**
+     * Get distance metric from an arbitrary position to a station.
+     * Uses Haversine via geo coordinates for realistic distances.
+     */
+    private getDistanceMetric(position: { x: number; y: number }, station: Station): number {
+        const fromGeo = percentToGeo(position.x, position.y);
+        const toGeo = station.geoPosition || percentToGeo(station.position.x, station.position.y);
+        // Return distance in km for scoring
+        return haversine(fromGeo.lat, fromGeo.lng, toGeo.lat, toGeo.lng) / 1000;
+    }
+
+    /**
+     * Look up routing matrix distance between two known stations (in meters).
+     * Returns null if matrix unavailable or stations not found.
+     */
+    private getMatrixDistance(fromStationId: string, toStationId: string): number | null {
+        const matrix = this.state.routingMatrix;
+        if (!matrix || matrix.fallback || !matrix.distances) return null;
+        const fromIdx = matrix.stationIds.indexOf(fromStationId);
+        const toIdx = matrix.stationIds.indexOf(toStationId);
+        if (fromIdx === -1 || toIdx === -1) return null;
+        return matrix.distances[fromIdx][toIdx];
+    }
+
+    /**
+     * Look up routing matrix duration between two known stations (in seconds).
+     */
+    private getMatrixDuration(fromStationId: string, toStationId: string): number | null {
+        const matrix = this.state.routingMatrix;
+        if (!matrix || matrix.fallback || !matrix.durations) return null;
+        const fromIdx = matrix.stationIds.indexOf(fromStationId);
+        const toIdx = matrix.stationIds.indexOf(toStationId);
+        if (fromIdx === -1 || toIdx === -1) return null;
+        return matrix.durations[fromIdx][toIdx];
     }
 
     private calculateDistance(a: { x: number; y: number }, b: { x: number; y: number }): number {
@@ -355,8 +399,13 @@ export class SimulationEngine {
     }
 
     private calculateETA(from: { x: number; y: number }, to: { x: number; y: number }): number {
-        const dist = this.calculateDistance(from, to);
-        return Math.max(1, Math.ceil(dist / DRIVER_SPEED));
+        // Try geo-based ETA: haversine distance / average city speed (~25 km/h)
+        const fromGeo = percentToGeo(from.x, from.y);
+        const toGeo = percentToGeo(to.x, to.y);
+        const distMeters = haversine(fromGeo.lat, fromGeo.lng, toGeo.lat, toGeo.lng);
+        const avgSpeedMPerMin = (25 * 1000) / 60; // 25 km/h in m/min
+        const geoEta = Math.max(1, Math.ceil(distMeters / avgSpeedMPerMin));
+        return geoEta;
     }
 
     step(): void {
@@ -595,29 +644,67 @@ export class SimulationEngine {
             ? Math.round(this.recentSwaps.length * (60 / Math.max(1, this.recentSwaps.length)))
             : Math.floor((activeChargers * 60) / AVG_SWAP_DURATION);
 
+        const opCost = this.calculateOperationalCost(operational);
+
+        // Carbon footprint calculation
+        const carbonIntensity = this.state.carbonData?.carbonIntensity ?? 720;
+        const kwhPerSwap = 3.5;
+        const carbonFootprintPerSwap = carbonIntensity * kwhPerSwap; // gCO2 per swap
+
         this.state.scenarioKPIs = {
             ...this.state.scenarioKPIs,
             avgWaitTime: totalWaitTime / operational.length,
             lostSwaps: totalLostSwaps + this.state.drivers.filter(d => d.status === 'abandoned').length,
             idleInventory: Math.max(0, totalInventory - currentInventory - chargingCount),
             chargerUtilization: activeChargers > 0 ? chargingCount / activeChargers : 0,
-            operationalCost: this.calculateOperationalCost(operational),
+            operationalCost: opCost,
             cityThroughput: Math.max(actualThroughput, Math.floor((activeChargers * 60) / AVG_SWAP_DURATION * 0.7)),
             revenue: totalSwaps * 150,
             peakWaitTime: Math.max(...operational.map(s => s.avgWaitTime), 0),
             averageQueueLength: operational.reduce((sum, s) => sum + s.queueLength, 0) / operational.length,
+            electricityCost: this._lastElectricityCost,
+            carbonIntensity,
+            carbonFootprintPerSwap,
+            totalCarbonFootprint: carbonFootprintPerSwap * totalSwaps,
         };
     }
 
     private calculateOperationalCost(stations: Station[]): number {
-        let cost = 0;
+        const hour = this.state?.hour ?? 8;
+        const effectiveRate = IEX_WHOLESALE_PRICE_CURVE[hour] * DELHI_TOD_MULTIPLIERS[hour];
+        this._lastEffectiveRate = effectiveRate;
+
+        let fixedCost = 0;
+        let electricityCost = 0;
+
         stations.forEach((station) => {
-            cost += 5000;  // Base station cost per day
-            cost += station.chargers * 500;  // Per charger cost
-            cost += station.inventoryCap * 100;  // Inventory holding cost
-            cost += station.activeChargers * 200;  // Active usage cost
+            fixedCost += 5000;  // Base station cost per day
+            fixedCost += station.chargers * 500;  // Per charger maintenance
+            fixedCost += station.inventoryCap * 100;  // Inventory holding cost
+
+            // Electricity cost: charging batteries * charger power * (1 min / 60) * rate
+            electricityCost += station.chargingBatteries * CHARGER_POWER_KW * (1 / 60) * effectiveRate;
         });
-        return cost;
+
+        this._lastElectricityCost = electricityCost;
+        return fixedCost + electricityCost;
+    }
+
+    setWeatherData(data: WeatherData): void {
+        this.state.weatherData = data;
+        this.state.demandConfig.weatherMultiplier = data.multiplier;
+    }
+
+    setCarbonIntensity(data: CarbonData): void {
+        this.state.carbonData = data;
+    }
+
+    setRoutingMatrix(matrix: RoutingMatrix): void {
+        this.state.routingMatrix = matrix;
+    }
+
+    getEffectiveRate(): number {
+        return this._lastEffectiveRate;
     }
 
     setRunning(running: boolean): void {

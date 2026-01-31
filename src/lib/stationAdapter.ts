@@ -1,12 +1,5 @@
 import { Station, GeoPosition } from '@/simulation/types';
-
-// Delhi NCR bounding box
-const DELHI_NCR_BOUNDS = {
-    north: 28.88,
-    south: 28.35,
-    east: 77.55,
-    west: 76.85,
-};
+import { geoToPercent } from '@/lib/geoUtils';
 
 interface OCMStation {
     ID: number;
@@ -33,15 +26,6 @@ interface OCMStation {
         Title: string;
     };
     UsageCost?: string;
-}
-
-function geoToPercent(lat: number, lng: number): { x: number; y: number } {
-    const x = ((lng - DELHI_NCR_BOUNDS.west) / (DELHI_NCR_BOUNDS.east - DELHI_NCR_BOUNDS.west)) * 100;
-    const y = ((DELHI_NCR_BOUNDS.north - lat) / (DELHI_NCR_BOUNDS.north - DELHI_NCR_BOUNDS.south)) * 100;
-    return {
-        x: Math.max(5, Math.min(95, x)),
-        y: Math.max(5, Math.min(95, y)),
-    };
 }
 
 function getChargerType(connections?: OCMStation['Connections']): 'standard' | 'fast' | 'mixed' {

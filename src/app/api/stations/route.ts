@@ -71,7 +71,18 @@ export async function GET(request: Request) {
     }
 
     try {
-        const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&latitude=${lat}&longitude=${lng}&distance=${distance}&distanceunit=KM&maxresults=${maxResults}&compact=true&verbose=false`;
+        const apiKey = process.env.OCM_API_KEY;
+        if (!apiKey) {
+            // No API key — skip the fetch and use fallback stations directly
+            return NextResponse.json({
+                stations: FALLBACK_STATIONS,
+                cached: false,
+                fallback: true,
+                count: FALLBACK_STATIONS.length,
+            });
+        }
+
+        const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&latitude=${lat}&longitude=${lng}&distance=${distance}&distanceunit=KM&maxresults=${maxResults}&compact=true&verbose=false&key=${apiKey}`;
 
         const response = await fetch(url, {
             headers: {
