@@ -8,7 +8,8 @@ import {
 import {
     initialStations, initialDrivers, baselineKPIs,
     defaultDemandConfig, defaultPricingConfig, defaultInventoryConfig,
-    demandCurves, IEX_WHOLESALE_PRICE_CURVE, DELHI_TOD_MULTIPLIERS, CHARGER_POWER_KW
+    demandCurves, IEX_WHOLESALE_PRICE_CURVE, DELHI_TOD_MULTIPLIERS, CHARGER_POWER_KW,
+    DRIVER_NAMES, generateVehicleId
 } from './mockData';
 import type { WeatherData, CarbonData, RoutingMatrix } from './types';
 import { haversine, percentToGeo } from '@/lib/geoUtils';
@@ -32,7 +33,7 @@ function poissonRandom(lambda: number): number {
 
 const AVG_SWAP_DURATION = 4; // minutes per swap
 const DRIVER_SPEED = 8; // units per minute (percentage-based)
-const MAX_DRIVERS = 30;
+const MAX_DRIVERS = 50;
 
 export class SimulationEngine {
     private state: SimulationState;
@@ -474,8 +475,19 @@ export class SimulationEngine {
             target.status = 'overloaded';
         }
 
+        const batteryLevel: Driver['batteryLevel'] = Math.random() < 0.15 ? 'critical' : Math.random() < 0.35 ? 'low' : 'normal';
+        const batteryPercent = batteryLevel === 'critical'
+            ? Math.floor(Math.random() * 15) + 1
+            : batteryLevel === 'low'
+                ? Math.floor(Math.random() * 25) + 20
+                : Math.floor(Math.random() * 40) + 45;
+        const swapsToday = Math.floor(Math.random() * 5);
+        const driverName = DRIVER_NAMES[Math.floor(Math.random() * DRIVER_NAMES.length)];
+        const vehicleId = generateVehicleId();
         const newDriver: Driver = {
             id: `driver-${this.state.time}-${Math.random().toString(36).slice(2, 6)}`,
+            name: driverName,
+            vehicleId,
             position: {
                 x: target.position.x + (Math.random() - 0.5) * 15,
                 y: target.position.y + (Math.random() - 0.5) * 15,
@@ -486,7 +498,10 @@ export class SimulationEngine {
                 { x: target.position.x + (Math.random() - 0.5) * 15, y: target.position.y + (Math.random() - 0.5) * 15 },
                 target.position
             ),
-            batteryLevel: Math.random() < 0.15 ? 'critical' : Math.random() < 0.35 ? 'low' : 'normal',
+            batteryLevel,
+            batteryPercent,
+            swapsToday,
+            amountOwed: swapsToday * 99,
         };
         this.state.drivers.push(newDriver);
 
@@ -519,14 +534,22 @@ export class SimulationEngine {
                 }
 
                 // Battery drain while traveling
-                if (driver.batteryLevel === 'low' && Math.random() < 0.02) {
+                driver.batteryPercent = Math.max(1, driver.batteryPercent - (Math.random() < 0.3 ? 1 : 0));
+                if (driver.batteryPercent < 20 && driver.batteryLevel !== 'critical') {
                     driver.batteryLevel = 'critical';
+                } else if (driver.batteryPercent < 45 && driver.batteryLevel === 'normal') {
+                    driver.batteryLevel = 'low';
                 }
             } else if (driver.status === 'swapping') {
                 // Fixed swap duration: increment wait time, complete after AVG_SWAP_DURATION
                 driver.waitTime = (driver.waitTime || 0) + 1;
                 if (driver.waitTime >= AVG_SWAP_DURATION) {
+                    driver.swapsToday += 1;
+                    driver.amountOwed += 99;
+                    driver.batteryPercent = Math.min(100, 80 + Math.floor(Math.random() * 20));
+                    driver.batteryLevel = 'normal';
                     driver.status = 'complete';
+                    driver.completedAt = this.state.time;
                     const station = this.state.stations.find((s) => s.id === driver.targetStationId);
                     if (station) {
                         station.queueLength = Math.max(0, station.queueLength - 1);
@@ -549,10 +572,17 @@ export class SimulationEngine {
             }
         });
 
-        // Remove completed and abandoned drivers
-        this.state.drivers = this.state.drivers.filter(
-            (d) => d.status !== 'complete' && d.status !== 'abandoned'
-        );
+        // Mark abandoned drivers with completedAt, then remove after 30 ticks
+        this.state.drivers.forEach((d) => {
+            if (d.status === 'abandoned' && !d.completedAt) {
+                d.completedAt = this.state.time;
+            }
+        });
+        this.state.drivers = this.state.drivers.filter((d) => {
+            if (d.status !== 'complete' && d.status !== 'abandoned') return true;
+            if (!d.completedAt) return true;
+            return this.state.time - d.completedAt < 30;
+        });
     }
 
     private updateStations(): void {

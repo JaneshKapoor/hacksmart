@@ -244,6 +244,96 @@ function createStationPopup(station: Station): string {
     `;
 }
 
+function createDriverPopup(driver: Driver): string {
+    const color = DRIVER_COLORS[driver.batteryLevel] || DRIVER_COLORS.normal;
+    const batteryColor = driver.batteryPercent < 20 ? '#ef4444' : driver.batteryPercent < 45 ? '#f59e0b' : '#22d3ee';
+
+    const statusLabels: Record<string, string> = {
+        seeking: 'SEEKING',
+        en_route: 'EN ROUTE',
+        swapping: 'SWAPPING',
+        complete: 'COMPLETE',
+        rerouting: 'REROUTING',
+        abandoned: 'ABANDONED',
+    };
+    const statusColors: Record<string, string> = {
+        seeking: '#f59e0b',
+        en_route: '#3b82f6',
+        swapping: '#10b981',
+        complete: '#10b981',
+        rerouting: '#f97316',
+        abandoned: '#ef4444',
+    };
+    const statusColor = statusColors[driver.status] || '#64748b';
+    const statusLabel = statusLabels[driver.status] || driver.status;
+
+    // Extract rider number from id
+    const riderNumber = driver.id.replace('driver-', '#');
+
+    return `
+        <div style="font-family: 'Inter', -apple-system, sans-serif; min-width: 240px; color: #f8fafc;">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="
+                        width: 40px; height: 40px; border-radius: 50%;
+                        border: 3px solid ${color};
+                        display: flex; align-items: center; justify-content: center;
+                        background: ${color}22;
+                    ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <span style="font-weight: 700; font-size: 16px; letter-spacing: -0.02em;">Rider ${riderNumber}</span>
+                </div>
+                <span style="
+                    background: ${statusColor}22;
+                    color: ${statusColor};
+                    padding: 5px 12px; border-radius: 14px; font-size: 10px; font-weight: 700;
+                    text-transform: uppercase; letter-spacing: 0.06em;
+                    border: 1px solid ${statusColor}44;
+                ">${statusLabel}</span>
+            </div>
+
+            <!-- Battery Level -->
+            <div style="background: rgba(30, 41, 59, 0.6); padding: 12px; border-radius: 10px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: #94a3b8; font-size: 12px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${batteryColor}" stroke-width="2">
+                            <rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect>
+                            <line x1="23" y1="13" x2="23" y2="11"></line>
+                        </svg>
+                        Battery Level
+                    </div>
+                    <span style="font-weight: 700; font-size: 16px; color: ${batteryColor};">${driver.batteryPercent}%</span>
+                </div>
+                <div style="height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden;">
+                    <div style="
+                        height: 100%; width: ${driver.batteryPercent}%;
+                        background: linear-gradient(90deg, ${batteryColor}cc, ${batteryColor});
+                        border-radius: 4px;
+                        box-shadow: 0 0 10px ${batteryColor}66;
+                    "></div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 12px; border-radius: 10px; border-left: 3px solid #a78bfa;">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 6px;">Owed (₹)</div>
+                    <div style="font-weight: 700; font-size: 18px; color: #a78bfa;">₹${driver.amountOwed}</div>
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 12px; border-radius: 10px; border-left: 3px solid #22d3ee;">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 6px;">Swaps Today</div>
+                    <div style="font-weight: 700; font-size: 18px; color: #22d3ee;">${driver.swapsToday}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 export default function LeafletMap({
     stations,
     drivers,
@@ -375,6 +465,7 @@ export default function LeafletMap({
                     weight: isCritical ? 2 : 1.5,
                     fillOpacity: 0.95,
                 });
+                existing.getPopup()?.setContent(createDriverPopup(driver));
             } else {
                 const marker = L.circleMarker(pos, {
                     radius: isCritical ? 6 : isLow ? 5 : 4,
@@ -384,6 +475,12 @@ export default function LeafletMap({
                     fillOpacity: 0.95,
                     className: isCritical ? 'driver-critical' : '',
                 }).addTo(map);
+
+                marker.bindPopup(createDriverPopup(driver), {
+                    className: 'dark-popup',
+                    closeButton: false,
+                    maxWidth: 280,
+                });
 
                 driverMarkersRef.current.set(driver.id, marker);
             }

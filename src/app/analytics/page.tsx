@@ -5,7 +5,7 @@ import {
     ArrowLeft, TrendingUp, TrendingDown, Zap, MapPin,
     Play, AlertTriangle, Clock, BarChart3, Info, Activity,
     Download, FileJson, FileSpreadsheet, Users, Battery, DollarSign,
-    Leaf, CloudRain
+    Leaf, CloudRain, Home, UserCheck
 } from 'lucide-react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -161,32 +161,60 @@ export default function AnalyticsPage() {
         <div className="min-h-screen bg-slate-950 text-white">
             {/* Header */}
             <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
-                <div className="px-6 py-3 flex items-center justify-between">
+                <div className="px-8 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => router.push('/')}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-sm"
+                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                         >
-                            <ArrowLeft size={14} />
-                            Control Center
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                                <Zap className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="text-left">
+                                <h1 className="text-lg font-bold leading-tight">
+                                    Electri<span className="text-cyan-400">Go</span>
+                                </h1>
+                                <p className="text-xs text-slate-500 leading-tight">Simulation Sandbox</p>
+                            </div>
                         </button>
+
+                        <div className="h-8 w-px bg-slate-700/50" />
+
+                        <button
+                            onClick={() => router.push('/')}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-sm border border-slate-700/50"
+                        >
+                            <Home size={14} />
+                            Home
+                        </button>
+
+                        <button
+                            onClick={() => router.push('/drivers')}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-sm border border-slate-700/50"
+                        >
+                            <Users size={14} />
+                            Drivers
+                        </button>
+
+                        <div className="h-8 w-px bg-slate-700/50" />
+
                         <div>
                             <h1 className="text-lg font-bold flex items-center gap-2">
                                 <Activity className="text-purple-400" size={18} />
                                 Analytics
                             </h1>
                             <p className="text-[10px] text-slate-500">
-                                {hasData ? `${chartData.length} data points · Day ${state.day}` : 'Run simulation to collect data'}
+                                {hasData ? `${chartData.length} data points · Day ${state.day}` : ''}
                             </p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                         {/* Export buttons */}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                             <button
                                 onClick={() => exportStationsCSV(state)}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                                className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
                                 title="Export station data as CSV"
                             >
                                 <FileSpreadsheet size={13} />
@@ -195,7 +223,7 @@ export default function AnalyticsPage() {
                             {hasData && (
                                 <button
                                     onClick={() => exportTimeSeriesCSV(state)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                                    className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
                                     title="Export time series as CSV"
                                 >
                                     <Download size={13} />
@@ -204,7 +232,7 @@ export default function AnalyticsPage() {
                             )}
                             <button
                                 onClick={() => exportSimulationJSON(state)}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                                className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
                                 title="Export full simulation snapshot as JSON"
                             >
                                 <FileJson size={13} />
@@ -212,13 +240,13 @@ export default function AnalyticsPage() {
                             </button>
                         </div>
 
-                        <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${state.isRunning ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                        <div className={`px-3.5 py-1.5 rounded-full text-xs font-medium ${state.isRunning ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
                             {state.isRunning ? 'LIVE' : 'PAUSED'}
                         </div>
                         {!state.isRunning && !hasData && (
                             <button
                                 onClick={() => { start(); router.push('/'); }}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-medium text-xs hover:opacity-90 transition-opacity"
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-medium text-xs transition-colors"
                             >
                                 <Play size={14} />
                                 Start Simulation
@@ -228,9 +256,9 @@ export default function AnalyticsPage() {
                 </div>
             </header>
 
-            <main className="p-5">
+            <main className="px-8 py-6">
                 {/* Network Health Summary Strip */}
-                <div className="grid grid-cols-4 xl:grid-cols-8 gap-3 mb-5">
+                <div className="grid grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
                     {[
                         { label: 'Stations', value: `${operationalCount}/${state.stations.length}`, icon: MapPin, color: 'text-blue-400' },
                         { label: 'Chargers', value: `${activeChargers}/${totalChargers}`, icon: Zap, color: 'text-amber-400' },
@@ -243,8 +271,8 @@ export default function AnalyticsPage() {
                     ].map((item) => {
                         const Icon = item.icon;
                         return (
-                            <div key={item.label} className="bg-slate-900/50 rounded-xl border border-slate-800/50 px-4 py-3">
-                                <div className="flex items-center gap-1.5 mb-1">
+                            <div key={item.label} className="bg-slate-900/50 rounded-xl border border-slate-800/50 px-5 py-4">
+                                <div className="flex items-center gap-2 mb-1.5">
                                     <Icon size={12} className={item.color} />
                                     <span className="text-[10px] text-slate-500">{item.label}</span>
                                 </div>
@@ -254,27 +282,10 @@ export default function AnalyticsPage() {
                     })}
                 </div>
 
-                {/* How to use - only if no data */}
-                {!hasData && (
-                    <div className="mb-5 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                        <div className="flex items-start gap-3">
-                            <Info className="text-blue-400 flex-shrink-0 mt-0.5" size={18} />
-                            <div>
-                                <h3 className="font-medium text-blue-300 mb-1 text-sm">How to Use Analytics</h3>
-                                <ol className="text-xs text-slate-400 space-y-0.5">
-                                    <li>1. Go to <span className="text-blue-400">Control Center</span> → Select a scenario</li>
-                                    <li>2. Click <span className="text-emerald-400">Apply Scenario</span> → Then <span className="text-emerald-400">Run Simulation</span></li>
-                                    <li>3. Return here to see <span className="text-purple-400">real-time analytics</span> and comparisons</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Charts Row */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
                     {/* Time Series Chart */}
-                    <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-5">
+                    <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h2 className="text-sm font-semibold text-white">Performance Over Time</h2>
@@ -314,14 +325,13 @@ export default function AnalyticsPage() {
                                 <div className="h-full flex flex-col items-center justify-center text-slate-500">
                                     <BarChart3 size={40} className="mb-2 text-slate-700" />
                                     <p className="text-xs">No data yet</p>
-                                    <p className="text-[10px] text-slate-600 mt-1">Run simulation to see performance charts</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Station Utilization Comparison */}
-                    <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-5">
+                    <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h2 className="text-sm font-semibold text-white">Station Utilization Comparison</h2>
@@ -361,10 +371,10 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* KPI Comparison + Insights Row */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
                     {/* KPI Comparison */}
-                    <div className="xl:col-span-2 bg-slate-900/50 rounded-xl border border-slate-800/50 p-5">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
+                        <div className="flex items-center justify-between mb-5">
                             <div>
                                 <h2 className="text-sm font-semibold text-white">Baseline vs Scenario</h2>
                                 <p className="text-[10px] text-slate-500">
@@ -372,12 +382,12 @@ export default function AnalyticsPage() {
                                 </p>
                             </div>
                             {hasScenario && state.activeScenario && (
-                                <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-[10px] rounded-full">
+                                <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-[10px] rounded-full">
                                     {state.activeScenario.type.replace('_', ' ').toUpperCase()}
                                 </span>
                             )}
                         </div>
-                        <div className="space-y-2.5">
+                        <div className="space-y-2">
                             {kpiComparison.map((kpi) => {
                                 const Icon = kpi.icon;
                                 const diff = kpi.scenario - kpi.baseline;
@@ -386,29 +396,29 @@ export default function AnalyticsPage() {
                                 const showChange = hasScenario && Math.abs(pctChange) >= 1;
 
                                 return (
-                                    <div key={kpi.metric} className="flex items-center justify-between py-2.5 px-4 bg-slate-800/30 rounded-lg hover:bg-slate-800/50 transition-colors">
+                                    <div key={kpi.metric} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 py-2.5 px-4 bg-slate-800/30 rounded-lg hover:bg-slate-800/50 transition-colors">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-1.5 rounded-lg bg-slate-700/50">
-                                                <Icon size={14} className="text-slate-400" />
+                                            <div className="p-1.5 rounded-md bg-slate-700/50">
+                                                <Icon size={13} className="text-slate-400" />
                                             </div>
                                             <span className="text-slate-300 text-xs font-medium">{kpi.metric}</span>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-right">
-                                                <span className="text-slate-500 text-xs">
-                                                    {kpi.baseline.toFixed(1)}{kpi.unit}
-                                                </span>
-                                                <span className="text-slate-600 mx-2">→</span>
-                                                <span className="text-white font-bold text-sm">
-                                                    {kpi.scenario.toFixed(1)}{kpi.unit}
-                                                </span>
-                                            </div>
-                                            {showChange && (
+                                        <div className="text-right whitespace-nowrap">
+                                            <span className="text-slate-500 text-xs">
+                                                {kpi.baseline.toFixed(1)}{kpi.unit}
+                                            </span>
+                                            <span className="text-slate-600 mx-1.5">&rarr;</span>
+                                            <span className="text-white font-bold text-sm">
+                                                {kpi.scenario.toFixed(1)}{kpi.unit}
+                                            </span>
+                                        </div>
+                                        <div className="w-14 flex justify-end">
+                                            {showChange ? (
                                                 <span className={`flex items-center gap-0.5 text-[10px] font-medium px-2 py-0.5 rounded-full ${isBetter ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
                                                     {isBetter ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                                                     {Math.abs(pctChange).toFixed(0)}%
                                                 </span>
-                                            )}
+                                            ) : null}
                                         </div>
                                     </div>
                                 );
@@ -417,8 +427,8 @@ export default function AnalyticsPage() {
                     </div>
 
                     {/* Insights */}
-                    <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-5">
-                        <div className="mb-4">
+                    <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
+                        <div className="mb-5">
                             <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                                 <Info className="text-amber-400" size={14} />
                                 Insights
@@ -429,13 +439,13 @@ export default function AnalyticsPage() {
                             {insights.map((insight, index) => (
                                 <div
                                     key={index}
-                                    className={`p-3 rounded-lg border ${
+                                    className={`p-4 rounded-lg border ${
                                         insight.type === 'danger' ? 'bg-red-500/10 border-red-500/20' :
                                         insight.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' :
                                         'bg-emerald-500/10 border-emerald-500/20'
                                     }`}
                                 >
-                                    <h4 className={`font-medium text-xs mb-0.5 ${
+                                    <h4 className={`font-medium text-xs mb-1 ${
                                         insight.type === 'danger' ? 'text-red-400' :
                                         insight.type === 'warning' ? 'text-amber-400' : 'text-emerald-400'
                                     }`}>
@@ -449,8 +459,8 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Station Performance Table */}
-                <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-5">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 p-6">
+                    <div className="flex items-center justify-between mb-5">
                         <div>
                             <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                                 <MapPin className="text-blue-400" size={14} />
@@ -460,9 +470,9 @@ export default function AnalyticsPage() {
                         </div>
                         <button
                             onClick={() => exportStationsCSV(state)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700/50 rounded-lg text-[10px] text-slate-400 hover:text-white transition-colors"
+                            className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
                         >
-                            <Download size={11} />
+                            <Download size={13} />
                             Export
                         </button>
                     </div>
@@ -470,14 +480,14 @@ export default function AnalyticsPage() {
                         <table className="w-full text-xs">
                             <thead>
                                 <tr className="border-b border-slate-700">
-                                    <th className="text-left py-2.5 px-3 text-slate-400 font-medium">Station</th>
-                                    <th className="text-right py-2.5 px-3 text-slate-400 font-medium">Swaps</th>
-                                    <th className="text-right py-2.5 px-3 text-slate-400 font-medium">Wait</th>
-                                    <th className="text-right py-2.5 px-3 text-slate-400 font-medium">Chargers</th>
-                                    <th className="text-right py-2.5 px-3 text-slate-400 font-medium">Inventory</th>
-                                    <th className="text-right py-2.5 px-3 text-slate-400 font-medium">Utilization</th>
-                                    <th className="text-right py-2.5 px-3 text-slate-400 font-medium">Lost</th>
-                                    <th className="text-center py-2.5 px-3 text-slate-400 font-medium">Status</th>
+                                    <th className="text-left py-3 pl-5 pr-4 text-slate-400 font-medium">Station</th>
+                                    <th className="text-right py-3 px-4 text-slate-400 font-medium">Swaps</th>
+                                    <th className="text-right py-3 px-4 text-slate-400 font-medium">Wait</th>
+                                    <th className="text-right py-3 px-4 text-slate-400 font-medium">Chargers</th>
+                                    <th className="text-right py-3 px-4 text-slate-400 font-medium">Inventory</th>
+                                    <th className="text-right py-3 px-4 text-slate-400 font-medium">Utilization</th>
+                                    <th className="text-right py-3 px-4 text-slate-400 font-medium">Lost</th>
+                                    <th className="text-center py-3 pl-4 pr-5 text-slate-400 font-medium">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -486,16 +496,16 @@ export default function AnalyticsPage() {
                                         key={station.id}
                                         className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors ${index === 0 ? 'bg-blue-500/5' : ''}`}
                                     >
-                                        <td className="py-2.5 px-3">
+                                        <td className="py-3 pl-5 pr-4">
                                             <div className="text-white font-medium">{station.name}</div>
                                             <div className="text-[10px] text-slate-500">{station.location}</div>
                                         </td>
-                                        <td className="text-right py-2.5 px-3">
+                                        <td className="text-right py-3 px-4">
                                             <span className="text-white font-bold">{station.totalSwaps}</span>
                                         </td>
-                                        <td className="text-right py-2.5 px-3 text-slate-300">{station.avgWaitTime}m</td>
-                                        <td className="text-right py-2.5 px-3 text-slate-300">{station.chargers}</td>
-                                        <td className="text-right py-2.5 px-3">
+                                        <td className="text-right py-3 px-4 text-slate-300">{station.avgWaitTime}m</td>
+                                        <td className="text-right py-3 px-4 text-slate-300">{station.chargers}</td>
+                                        <td className="text-right py-3 px-4">
                                             <div className="flex items-center justify-end gap-2">
                                                 <div className="w-14 h-1.5 bg-slate-700 rounded-full overflow-hidden">
                                                     <div
@@ -509,7 +519,7 @@ export default function AnalyticsPage() {
                                                 <span className="text-[10px] text-slate-400">{station.inventory}/{station.inventoryCap}</span>
                                             </div>
                                         </td>
-                                        <td className="text-right py-2.5 px-3">
+                                        <td className="text-right py-3 px-4">
                                             <span className={`font-medium ${
                                                 Number(station.utilization) > 90 ? 'text-red-400' :
                                                 Number(station.utilization) > 70 ? 'text-amber-400' : 'text-emerald-400'
@@ -517,13 +527,13 @@ export default function AnalyticsPage() {
                                                 {station.utilization}%
                                             </span>
                                         </td>
-                                        <td className="text-right py-2.5 px-3">
+                                        <td className="text-right py-3 px-4">
                                             <span className={station.lostSwaps > 0 ? 'text-red-400 font-medium' : 'text-slate-500'}>
                                                 {station.lostSwaps}
                                             </span>
                                         </td>
-                                        <td className="text-center py-2.5 px-3">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                        <td className="text-center py-3 pl-4 pr-5">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-medium ${
                                                 station.status === 'operational' ? 'bg-emerald-500/20 text-emerald-400' :
                                                 station.status === 'fire' ? 'bg-red-500/20 text-red-400' :
                                                 station.status === 'overloaded' ? 'bg-orange-500/20 text-orange-400' :

@@ -46,13 +46,19 @@ export interface Station {
 
 export interface Driver {
     id: string;
+    name: string;
+    vehicleId: string;
     position: Position;
     targetStationId: string | null;
     originalStationId?: string; // For tracking reroutes
     status: 'seeking' | 'en_route' | 'swapping' | 'complete' | 'rerouting' | 'abandoned';
     eta: number;
     batteryLevel: 'normal' | 'low' | 'critical';
+    batteryPercent: number;
+    swapsToday: number;
+    amountOwed: number;
     waitTime?: number;
+    completedAt?: number;
 }
 
 export type ScenarioType =
