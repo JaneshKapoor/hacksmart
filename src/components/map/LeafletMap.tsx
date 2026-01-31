@@ -36,35 +36,96 @@ const DRIVER_COLORS: Record<string, string> = {
 function createStationIcon(station: Station): L.DivIcon {
     const color = STATUS_COLORS[station.status] || STATUS_COLORS.operational;
     const isEmergency = station.status === 'fire' || station.status === 'power_outage';
-    const pulse = isEmergency ? 'animation: pulse 1.5s infinite;' : '';
-    const glow = isEmergency ? `box-shadow: 0 0 20px ${color}88;` : `box-shadow: 0 0 10px ${color}44;`;
+    const isOperational = station.status === 'operational';
+    const isLowStock = station.status === 'low_inventory';
+
+    // Pulse animation for different states
+    const pulseAnimation = isEmergency
+        ? 'animation: emergencyPulse 0.8s infinite;'
+        : isOperational
+            ? 'animation: operationalPulse 2s infinite;'
+            : isLowStock
+                ? 'animation: warningPulse 1.5s infinite;'
+                : '';
+
+    // Glow intensity based on status
+    const glowIntensity = isEmergency ? 30 : isOperational ? 15 : 10;
+    const glow = `box-shadow: 0 0 ${glowIntensity}px ${color}88, 0 0 ${glowIntensity * 2}px ${color}44;`;
+
+    // Outer pulse ring for operational stations
+    const pulseRing = isOperational ? `
+        <div style="
+            position: absolute; inset: -8px;
+            border-radius: 50%;
+            border: 2px solid ${color};
+            animation: pulseRing 2s ease-out infinite;
+            opacity: 0;
+        "></div>
+    ` : isEmergency ? `
+        <div style="
+            position: absolute; inset: -6px;
+            border-radius: 50%;
+            background: ${color}33;
+            animation: pulseRing 1s ease-out infinite;
+        "></div>
+    ` : '';
 
     return L.divIcon({
         className: 'custom-station-marker',
         html: `
+            <style>
+                @keyframes operationalPulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                }
+                @keyframes emergencyPulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.1); opacity: 0.8; }
+                }
+                @keyframes warningPulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.03); }
+                }
+                @keyframes pulseRing {
+                    0% { transform: scale(1); opacity: 0.6; }
+                    100% { transform: scale(2); opacity: 0; }
+                }
+            </style>
             <div style="
-                width: 32px; height: 32px; border-radius: 50%;
-                background: ${color}; border: 2px solid ${color}cc;
-                display: flex; align-items: center; justify-content: center;
-                color: white; font-size: 11px; font-weight: 700;
-                ${glow} ${pulse}
-                position: relative; cursor: pointer;
+                position: relative;
+                width: 36px; height: 36px;
             ">
-                ${station.queueLength > 0 ? station.queueLength : ''}
+                ${pulseRing}
+                <div style="
+                    width: 36px; height: 36px; border-radius: 50%;
+                    background: linear-gradient(135deg, ${color} 0%, ${color}cc 100%);
+                    border: 3px solid ${color};
+                    display: flex; align-items: center; justify-content: center;
+                    color: white; font-size: 12px; font-weight: 700;
+                    ${glow} ${pulseAnimation}
+                    position: relative; cursor: pointer;
+                    transition: transform 0.2s ease;
+                ">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                </div>
                 ${station.queueLength > 0 ? `
                     <div style="
-                        position: absolute; top: -6px; right: -6px;
-                        min-width: 16px; height: 16px; border-radius: 8px;
-                        background: #0f172a; border: 1px solid #334155;
+                        position: absolute; top: -4px; right: -4px;
+                        min-width: 20px; height: 20px; border-radius: 10px;
+                        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                        border: 2px solid #0f172a;
                         display: flex; align-items: center; justify-content: center;
-                        font-size: 9px; font-weight: 700; color: white; padding: 0 3px;
+                        font-size: 10px; font-weight: 700; color: white; padding: 0 4px;
+                        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
                     ">${station.queueLength}</div>
                 ` : ''}
             </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -20],
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -22],
     });
 }
 
@@ -72,38 +133,86 @@ function createStationPopup(station: Station): string {
     const color = STATUS_COLORS[station.status] || STATUS_COLORS.operational;
     const inventoryPct = (station.currentInventory / station.inventoryCap) * 100;
     const inventoryColor = inventoryPct < 20 ? '#ef4444' : inventoryPct < 50 ? '#f59e0b' : '#10b981';
+    const utilizationColor = station.utilizationRate > 0.85 ? '#ef4444' : station.utilizationRate > 0.65 ? '#f59e0b' : '#10b981';
 
     return `
-        <div style="font-family: Inter, sans-serif; min-width: 220px; color: #f8fafc;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                <span style="font-weight: 600; font-size: 14px;">${station.name}</span>
+        <div style="font-family: 'Inter', -apple-system, sans-serif; min-width: 260px; color: #f8fafc;">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <span style="font-weight: 700; font-size: 15px; letter-spacing: -0.02em;">${station.name}</span>
                 <span style="
-                    background: ${color}22; color: ${color};
-                    padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 500;
+                    background: linear-gradient(135deg, ${color}33 0%, ${color}22 100%);
+                    color: ${color};
+                    padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 600;
+                    text-transform: uppercase; letter-spacing: 0.05em;
+                    border: 1px solid ${color}44;
                 ">${station.status.replace('_', ' ')}</span>
             </div>
-            <div style="color: #94a3b8; font-size: 11px; margin-bottom: 10px;">${station.location}</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-                <div>
-                    <div style="color: #64748b; font-size: 10px;">Wait Time</div>
-                    <div style="font-weight: 600;">${station.avgWaitTime.toFixed(1)}m</div>
+            
+            <!-- Location -->
+            <div style="color: #64748b; font-size: 11px; margin-bottom: 14px; display: flex; align-items: center; gap: 6px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                ${station.location}
+            </div>
+            
+            <!-- Stats Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; margin-bottom: 14px;">
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 10px; border-left: 3px solid #22d3ee;">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        Wait Time
+                    </div>
+                    <div style="font-weight: 700; font-size: 16px; color: #22d3ee;">${station.avgWaitTime.toFixed(1)}<span style="font-size: 11px; font-weight: 500; color: #64748b;">m</span></div>
                 </div>
-                <div>
-                    <div style="color: #64748b; font-size: 10px;">Chargers</div>
-                    <div style="font-weight: 600;">${station.activeChargers}/${station.chargers}</div>
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 10px; border-left: 3px solid #3b82f6;">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                        </svg>
+                        Chargers
+                    </div>
+                    <div style="font-weight: 700; font-size: 16px; color: #3b82f6;">${station.activeChargers}<span style="font-size: 11px; font-weight: 500; color: #64748b;">/${station.chargers}</span></div>
                 </div>
-                <div>
-                    <div style="color: #64748b; font-size: 10px;">Inventory</div>
-                    <div style="font-weight: 600;">${station.currentInventory}/${station.inventoryCap}</div>
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 10px; border-left: 3px solid ${inventoryColor};">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="${inventoryColor}" stroke-width="2">
+                            <rect x="1" y="6" width="18" height="12" rx="2" ry="2"></rect>
+                            <line x1="23" y1="13" x2="23" y2="11"></line>
+                        </svg>
+                        Inventory
+                    </div>
+                    <div style="font-weight: 700; font-size: 16px; color: ${inventoryColor};">${station.currentInventory}<span style="font-size: 11px; font-weight: 500; color: #64748b;">/${station.inventoryCap}</span></div>
                 </div>
-                <div>
-                    <div style="color: #64748b; font-size: 10px;">Utilization</div>
-                    <div style="font-weight: 600;">${(station.utilizationRate * 100).toFixed(0)}%</div>
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 10px; border-left: 3px solid ${utilizationColor};">
+                    <div style="color: #64748b; font-size: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="${utilizationColor}" stroke-width="2">
+                            <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"></polyline>
+                        </svg>
+                        Utilization
+                    </div>
+                    <div style="font-weight: 700; font-size: 16px; color: ${utilizationColor};">${(station.utilizationRate * 100).toFixed(0)}<span style="font-size: 11px; font-weight: 500; color: #64748b;">%</span></div>
                 </div>
             </div>
-            <div style="margin-top: 8px;">
-                <div style="height: 4px; background: #334155; border-radius: 2px; overflow: hidden;">
-                    <div style="height: 100%; width: ${inventoryPct}%; background: ${inventoryColor}; border-radius: 2px;"></div>
+            
+            <!-- Inventory Progress Bar -->
+            <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 10px;">
+                    <span style="color: #94a3b8;">Battery Level</span>
+                    <span style="color: ${inventoryColor}; font-weight: 600;">${inventoryPct.toFixed(0)}%</span>
+                </div>
+                <div style="height: 6px; background: #1e293b; border-radius: 4px; overflow: hidden;">
+                    <div style="
+                        height: 100%; width: ${inventoryPct}%; 
+                        background: linear-gradient(90deg, ${inventoryColor}cc, ${inventoryColor});
+                        border-radius: 4px;
+                        box-shadow: 0 0 10px ${inventoryColor}66;
+                    "></div>
                 </div>
             </div>
         </div>
@@ -224,18 +333,27 @@ export default function LeafletMap({
         drivers.forEach((driver) => {
             const pos: [number, number] = percentToGeo(driver.position.x, driver.position.y);
             const color = DRIVER_COLORS[driver.batteryLevel] || DRIVER_COLORS.normal;
+            const isCritical = driver.batteryLevel === 'critical';
+            const isLow = driver.batteryLevel === 'low';
 
             const existing = driverMarkersRef.current.get(driver.id);
             if (existing) {
                 existing.setLatLng(pos);
-                existing.setStyle({ fillColor: color, color });
-            } else {
-                const marker = L.circleMarker(pos, {
-                    radius: 4,
+                existing.setStyle({
                     fillColor: color,
                     color,
-                    weight: 1,
-                    fillOpacity: 0.9,
+                    radius: isCritical ? 6 : isLow ? 5 : 4,
+                    weight: isCritical ? 2 : 1.5,
+                    fillOpacity: 0.95,
+                });
+            } else {
+                const marker = L.circleMarker(pos, {
+                    radius: isCritical ? 6 : isLow ? 5 : 4,
+                    fillColor: color,
+                    color,
+                    weight: isCritical ? 2 : 1.5,
+                    fillOpacity: 0.95,
+                    className: isCritical ? 'driver-critical' : '',
                 }).addTo(map);
 
                 driverMarkersRef.current.set(driver.id, marker);

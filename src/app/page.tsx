@@ -332,26 +332,26 @@ export default function ControlCenter() {
               {!state.isRunning ? (
                 <button
                   onClick={start}
-                  className="flex items-center gap-2 px-5 py-2 bg-emerald-500 rounded-lg font-semibold text-sm hover:bg-emerald-400 transition-colors"
+                  className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl font-semibold text-sm hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Play size={16} />
+                  <Play size={16} className="group-hover:animate-pulse" />
                   Run
                 </button>
               ) : (
                 <button
                   onClick={pause}
-                  className="flex items-center gap-2 px-5 py-2 bg-amber-500 rounded-lg font-semibold text-sm hover:bg-amber-400 transition-colors"
+                  className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl font-semibold text-sm hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Pause size={16} />
+                  <Pause size={16} className="group-hover:animate-pulse" />
                   Pause
                 </button>
               )}
               <button
                 onClick={reset}
-                className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+                className="group p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 transition-all border border-slate-700/50 hover:border-slate-600 hover:scale-[1.05] active:scale-[0.95]"
                 title="Reset (R)"
               >
-                <RotateCcw size={16} />
+                <RotateCcw size={16} className="group-hover:rotate-[-180deg] transition-transform duration-500" />
               </button>
             </div>
           </div>
@@ -359,7 +359,8 @@ export default function ControlCenter() {
           {/* Center: Time + Speed */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
-              <span className={`px-2.5 py-1 rounded text-xs font-bold tracking-wide ${state.isRunning ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+              <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${state.isRunning ? 'bg-emerald-500/20 text-emerald-400 shadow-sm shadow-emerald-500/20' : 'bg-slate-800 text-slate-500'}`}>
+                {state.isRunning && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
                 {state.isRunning ? 'LIVE' : 'PAUSED'}
               </span>
               <span className="text-xl font-bold font-mono tabular-nums">{formatTime(state.time)}</span>
@@ -368,12 +369,14 @@ export default function ControlCenter() {
 
             <div className="h-6 w-px bg-slate-700/50" />
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 bg-slate-800/50 p-1 rounded-xl">
               {[1, 2, 4, 8].map((s) => (
                 <button
                   key={s}
                   onClick={() => setSpeed(s)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${state.speed === s ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${state.speed === s
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/30'
+                    : 'text-slate-500 hover:bg-slate-700 hover:text-slate-300'}`}
                 >
                   {s}x
                 </button>
@@ -383,10 +386,12 @@ export default function ControlCenter() {
 
           {/* Right: Data Mode + Analytics */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700/50 p-0.5">
+            <div className="flex items-center bg-slate-800/80 rounded-xl border border-slate-700/50 p-1">
               <button
                 onClick={() => handleDataModeChange('simulation')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${dataMode === 'simulation' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${dataMode === 'simulation'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
               >
                 <Cpu size={15} />
                 Sim
@@ -394,18 +399,20 @@ export default function ControlCenter() {
               <button
                 onClick={() => handleDataModeChange('real')}
                 disabled={isLoadingReal}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${dataMode === 'real' ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'} ${isLoadingReal ? 'opacity-50' : ''}`}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${dataMode === 'real'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-sm shadow-emerald-500/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'} ${isLoadingReal ? 'opacity-50' : ''}`}
               >
-                <Globe size={15} />
+                <Globe size={15} className={dataMode === 'real' ? 'animate-pulse' : ''} />
                 {isLoadingReal ? '...' : 'Real'}
               </button>
             </div>
 
             <button
               onClick={() => router.push('/analytics')}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700/50 rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
+              className="group flex items-center gap-2 px-4 py-2.5 bg-slate-800/80 border border-slate-700/50 rounded-xl text-sm font-medium hover:bg-slate-700 hover:border-purple-500/30 transition-all hover:shadow-sm hover:shadow-purple-500/20"
             >
-              <Activity size={16} />
+              <Activity size={16} className="text-purple-400 group-hover:animate-pulse" />
               Analytics
             </button>
           </div>
@@ -428,31 +435,64 @@ export default function ControlCenter() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {kpiData.map((kpi) => {
+            <div className="grid grid-cols-2 gap-4">
+              {kpiData.map((kpi, index) => {
                 const Icon = kpi.icon;
                 const { pct, isBetter } = getKPIDelta(kpi.value, kpi.baseline, kpi.inverse);
                 const showDelta = state.activeScenario && Math.abs(pct) >= 0.5;
-                const borderColor = kpi.color === 'blue' ? 'border-l-blue-500' : kpi.color === 'red' ? 'border-l-red-500' : kpi.color === 'amber' ? 'border-l-amber-500' : 'border-l-emerald-500';
-                const iconColor = kpi.color === 'blue' ? 'text-blue-400' : kpi.color === 'red' ? 'text-red-400' : kpi.color === 'amber' ? 'text-amber-400' : 'text-emerald-400';
+
+                const gradientClass = kpi.color === 'blue'
+                  ? 'from-blue-500/20 to-blue-600/5'
+                  : kpi.color === 'red'
+                    ? 'from-red-500/20 to-red-600/5'
+                    : kpi.color === 'amber'
+                      ? 'from-amber-500/20 to-amber-600/5'
+                      : 'from-emerald-500/20 to-emerald-600/5';
+
+                const iconBgClass = kpi.color === 'blue'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : kpi.color === 'red'
+                    ? 'bg-red-500/20 text-red-400'
+                    : kpi.color === 'amber'
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-emerald-500/20 text-emerald-400';
+
+                const glowClass = kpi.color === 'blue'
+                  ? 'shadow-blue-500/20'
+                  : kpi.color === 'red'
+                    ? 'shadow-red-500/20'
+                    : kpi.color === 'amber'
+                      ? 'shadow-amber-500/20'
+                      : 'shadow-emerald-500/20';
 
                 return (
                   <div
                     key={kpi.label}
-                    className={`bg-slate-800/40 rounded-xl p-3.5 border border-slate-700/20 border-l-2 ${borderColor}`}
+                    className={`metric-card group bg-gradient-to-br ${gradientClass} hover:shadow-lg ${glowClass} flex flex-col min-h-[120px]`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icon size={14} className={iconColor} />
-                      <span className="text-xs text-slate-400">{kpi.label}</span>
+                    {/* Shimmer overlay */}
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
+
+                    {/* Header row: Icon + Label */}
+                    <div className="flex items-center gap-3 relative z-10 mb-6">
+                      <div className={`w-10 h-10 rounded-xl ${iconBgClass} flex items-center justify-center flex-shrink-0 group-hover:animate-float transition-all duration-300 group-hover:scale-110`}>
+                        <Icon size={18} className="drop-shadow-lg" />
+                      </div>
+                      <span className="text-sm text-slate-400 font-medium leading-tight">{kpi.label}</span>
                     </div>
-                    <div className="flex items-end justify-between">
-                      <div className="text-2xl font-bold tabular-nums leading-tight text-white">
-                        {kpi.value.toFixed(kpi.unit === '%' || kpi.unit === 'min' ? 1 : 0)}
-                        <span className="text-sm text-slate-500 ml-0.5">{kpi.unit}</span>
+
+                    {/* Value row - pushed to bottom with more spacing */}
+                    <div className="flex items-baseline justify-between relative z-10 mt-auto pt-8">
+                      <div className="flex items-baseline">
+                        <span className="text-3xl font-bold tabular-nums leading-none text-white tracking-tight">
+                          {kpi.value.toFixed(kpi.unit === '%' || kpi.unit === 'min' ? 1 : 0)}
+                        </span>
+                        <span className="text-base text-slate-500 font-medium ml-1">{kpi.unit}</span>
                       </div>
                       {showDelta && (
-                        <div className={`flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded ${isBetter ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
-                          {isBetter ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                        <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-all ${isBetter ? 'text-emerald-400 bg-emerald-500/15 shadow-sm shadow-emerald-500/20' : 'text-red-400 bg-red-500/15 shadow-sm shadow-red-500/20'}`}>
+                          {isBetter ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                           {Math.abs(pct).toFixed(1)}%
                         </div>
                       )}
@@ -477,22 +517,25 @@ export default function ControlCenter() {
 
             {/* Scenario Tabs - 5 column grid */}
             <div className="px-5 pb-3">
-              <div className="bg-slate-800/30 rounded-xl p-2 border border-slate-700/20">
-                <div className="grid grid-cols-5 gap-1.5">
-                  {SCENARIO_CATEGORIES.map((cat) => (
+              <div className="glass-card rounded-2xl p-3">
+                <div className="grid grid-cols-5 gap-2">
+                  {SCENARIO_CATEGORIES.map((cat, index) => (
                     <button
                       key={cat.type}
                       onClick={() => !state.isRunning && handleScenarioChange(cat.type)}
                       disabled={state.isRunning}
                       title={cat.description}
-                      className={`flex flex-col items-center gap-1 px-1.5 py-2 rounded-lg text-xs font-medium transition-all
+                      className={`scenario-tab group flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-300 ripple-effect
                         ${activeScenarioType === cat.type
-                          ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/30'
-                          : 'text-slate-500 hover:bg-slate-700/50 hover:text-slate-300'}
+                          ? 'active text-white shadow-lg'
+                          : 'text-slate-500 hover:text-slate-200 hover:bg-slate-700/40'}
                         ${state.isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                      {scenarioIcons[cat.type]}
-                      {cat.label}
+                      <span className={`transition-transform duration-300 ${activeScenarioType === cat.type ? 'animate-float' : 'group-hover:scale-110'}`}>
+                        {scenarioIcons[cat.type]}
+                      </span>
+                      <span className="truncate max-w-full">{cat.label}</span>
                     </button>
                   ))}
                 </div>
@@ -516,73 +559,130 @@ export default function ControlCenter() {
 
                 return (
                   <div className="space-y-4">
-                    {/* Status banner */}
-                    <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${
-                      operational === totalStations
-                        ? 'bg-emerald-500/8 border-emerald-500/20'
-                        : operational > totalStations * 0.7
-                          ? 'bg-amber-500/8 border-amber-500/20'
-                          : 'bg-red-500/8 border-red-500/20'
-                    }`}>
-                      <div className={`w-3 h-3 rounded-full animate-pulse ${operational === totalStations ? 'bg-emerald-500' : operational > totalStations * 0.7 ? 'bg-amber-500' : 'bg-red-500'}`} />
-                      <span className="text-sm font-medium text-slate-200">
-                        {operational === totalStations ? 'All Systems Operational' : `${operational}/${totalStations} Operational`}
-                      </span>
+                    {/* Status banner with progress ring */}
+                    <div className={`relative flex items-center gap-4 p-4 rounded-2xl border overflow-hidden transition-all ${operational === totalStations
+                      ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'
+                      : operational > totalStations * 0.7
+                        ? 'bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/30'
+                        : 'bg-gradient-to-r from-red-500/10 to-red-600/5 border-red-500/30'
+                      }`}>
+                      {/* Shimmer overlay */}
+                      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent" style={{ animationDuration: '3s', animationIterationCount: 'infinite' }} />
+
+                      {/* Progress ring */}
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <svg className="w-12 h-12 -rotate-90">
+                          <circle
+                            cx="24" cy="24" r="20"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            className="text-slate-700/50"
+                          />
+                          <circle
+                            cx="24" cy="24" r="20"
+                            fill="none"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeDasharray={`${(operational / totalStations) * 125.6} 125.6`}
+                            className={`transition-all duration-1000 ${operational === totalStations ? 'text-emerald-500' : operational > totalStations * 0.7 ? 'text-amber-500' : 'text-red-500'}`}
+                            style={{ filter: 'drop-shadow(0 0 6px currentColor)' }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className={`w-2.5 h-2.5 rounded-full animate-breathe ${operational === totalStations ? 'bg-emerald-500 text-emerald-500' : operational > totalStations * 0.7 ? 'bg-amber-500 text-amber-500' : 'bg-red-500 text-red-500'}`} />
+                        </div>
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="text-base font-semibold text-white mb-0.5">
+                          {operational === totalStations ? 'All Systems Operational' : `${operational}/${totalStations} Operational`}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          Network health: {((operational / totalStations) * 100).toFixed(0)}%
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Stats grid */}
+                    {/* Stats grid with glass cards */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-800/40 rounded-xl p-3 border border-slate-700/20 border-l-2 border-l-emerald-500">
-                        <div className="text-xs text-slate-500 mb-1">Stations Online</div>
-                        <div className="text-xl font-bold text-emerald-400 tabular-nums">{operational}<span className="text-sm text-slate-600">/{totalStations}</span></div>
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #10b981' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <MapPin size={12} className="text-emerald-400" />
+                          Stations Online
+                        </div>
+                        <div className="text-2xl font-bold text-emerald-400 tabular-nums">
+                          {operational}<span className="text-sm text-slate-600 font-medium">/{totalStations}</span>
+                        </div>
                       </div>
-                      <div className="bg-slate-800/40 rounded-xl p-3 border border-slate-700/20 border-l-2 border-l-blue-500">
-                        <div className="text-xs text-slate-500 mb-1">Active Chargers</div>
-                        <div className="text-xl font-bold text-blue-400 tabular-nums">{activeChargers}<span className="text-sm text-slate-600">/{totalChargers}</span></div>
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #3b82f6' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <Zap size={12} className="text-blue-400" />
+                          Active Chargers
+                        </div>
+                        <div className="text-2xl font-bold text-blue-400 tabular-nums">
+                          {activeChargers}<span className="text-sm text-slate-600 font-medium">/{totalChargers}</span>
+                        </div>
                       </div>
-                      <div className="bg-slate-800/40 rounded-xl p-3 border border-slate-700/20 border-l-2 border-l-amber-500">
-                        <div className="text-xs text-slate-500 mb-1">Avg Utilization</div>
-                        <div className={`text-xl font-bold tabular-nums ${avgUtil > 85 ? 'text-red-400' : avgUtil > 65 ? 'text-amber-400' : 'text-emerald-400'}`}>{avgUtil.toFixed(1)}%</div>
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #f59e0b' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <Activity size={12} className="text-amber-400" />
+                          Avg Utilization
+                        </div>
+                        <div className={`text-2xl font-bold tabular-nums ${avgUtil > 85 ? 'text-red-400' : avgUtil > 65 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {avgUtil.toFixed(1)}<span className="text-sm">%</span>
+                        </div>
                       </div>
-                      <div className="bg-slate-800/40 rounded-xl p-3 border border-slate-700/20 border-l-2 border-l-cyan-500">
-                        <div className="text-xs text-slate-500 mb-1">Avg Wait Time</div>
-                        <div className={`text-xl font-bold tabular-nums ${avgWait > 8 ? 'text-red-400' : avgWait > 4 ? 'text-amber-400' : 'text-emerald-400'}`}>{avgWait.toFixed(1)}<span className="text-sm text-slate-600"> min</span></div>
+                      <div className="glass-card rounded-xl p-3.5 group hover:scale-[1.02] transition-transform duration-300" style={{ borderLeft: '3px solid #22d3ee' }}>
+                        <div className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                          <Clock size={12} className="text-cyan-400" />
+                          Avg Wait Time
+                        </div>
+                        <div className={`text-2xl font-bold tabular-nums ${avgWait > 8 ? 'text-red-400' : avgWait > 4 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {avgWait.toFixed(1)}<span className="text-sm text-slate-600 font-medium"> min</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Inventory bar */}
-                    <div className="bg-slate-800/40 rounded-xl p-3.5 border border-slate-700/20">
-                      <div className="flex items-center justify-between text-xs mb-2">
-                        <span className="text-slate-400 flex items-center gap-2">
-                          <Battery size={14} className="text-emerald-400" />
+                    {/* Inventory bar with premium styling */}
+                    <div className="glass-card rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm text-slate-300 flex items-center gap-2 font-medium">
+                          <Battery size={16} className="text-emerald-400 animate-float" />
                           Battery Inventory
                         </span>
-                        <span className="text-slate-300 font-medium tabular-nums">{inventoryPct.toFixed(0)}%</span>
+                        <span className={`text-lg font-bold tabular-nums ${inventoryPct < 25 ? 'text-red-400' : inventoryPct < 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {inventoryPct.toFixed(0)}%
+                        </span>
                       </div>
-                      <div className="h-3 bg-slate-700/60 rounded-full overflow-hidden">
+                      <div className="premium-progress">
                         <div
-                          className={`h-full rounded-full transition-all duration-500 ${inventoryPct < 25 ? 'bg-gradient-to-r from-red-600 to-red-500' : inventoryPct < 50 ? 'bg-gradient-to-r from-amber-600 to-amber-500' : 'bg-gradient-to-r from-emerald-600 to-emerald-400'}`}
-                          style={{ width: `${inventoryPct}%` }}
+                          className={`premium-progress-fill ${inventoryPct < 25 ? 'bg-gradient-to-r from-red-600 via-red-500 to-red-400' : inventoryPct < 50 ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400' : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400'}`}
+                          style={{ width: `${inventoryPct}%`, boxShadow: inventoryPct < 25 ? '0 0 12px rgba(239, 68, 68, 0.4)' : inventoryPct < 50 ? '0 0 12px rgba(245, 158, 11, 0.4)' : '0 0 12px rgba(16, 185, 129, 0.4)' }}
                         />
                       </div>
-                      <div className="flex justify-between mt-2">
-                        <span className="text-xs text-slate-600">{totalInventory} / {totalCap} batteries</span>
+                      <div className="flex justify-between mt-2.5">
+                        <span className="text-xs text-slate-500">{totalInventory.toLocaleString()} / {totalCap.toLocaleString()} batteries</span>
                         {lowStockStations > 0 && (
-                          <span className="text-xs text-amber-400 flex items-center gap-1">
+                          <span className="text-xs text-amber-400 flex items-center gap-1 animate-pulse">
                             <AlertTriangle size={11} />
-                            {lowStockStations} low
+                            {lowStockStations} low stock
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Total swaps */}
-                    <div className="bg-slate-800/40 rounded-xl p-3.5 border border-slate-700/20 flex items-center justify-between">
-                      <span className="text-xs text-slate-400 flex items-center gap-2">
-                        <Zap size={14} className="text-purple-400" />
+                    {/* Total swaps with neon styling */}
+                    <div className="glass-card rounded-xl p-4 flex items-center justify-between group hover:border-purple-500/30 transition-colors">
+                      <span className="text-sm text-slate-400 flex items-center gap-2.5 font-medium">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                          <Zap size={16} className="text-purple-400 group-hover:animate-float" />
+                        </div>
                         Total Swaps
                       </span>
-                      <span className="text-lg font-bold tabular-nums text-white">{totalSwaps.toLocaleString()}</span>
+                      <span className="text-2xl font-bold tabular-nums text-white" style={{ textShadow: '0 0 20px rgba(168, 85, 247, 0.4)' }}>
+                        {totalSwaps.toLocaleString()}
+                      </span>
                     </div>
 
                     <p className="text-xs text-slate-600 text-center pt-1">
@@ -791,15 +891,13 @@ export default function ControlCenter() {
                               if (isDisabled) next.delete(s.id); else next.add(s.id);
                               setNetworkDisabledStations(next);
                             }}
-                            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                              isDisabled
-                                ? 'bg-red-500/15 border-red-500/40'
-                                : 'bg-slate-800/50 border-slate-700/50 hover:border-slate-600'
-                            }`}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isDisabled
+                              ? 'bg-red-500/15 border-red-500/40'
+                              : 'bg-slate-800/50 border-slate-700/50 hover:border-slate-600'
+                              }`}
                           >
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${
-                              isDisabled ? 'bg-red-500 border-red-500 text-white' : 'border-slate-600'
-                            }`}>
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${isDisabled ? 'bg-red-500 border-red-500 text-white' : 'border-slate-600'
+                              }`}>
                               {isDisabled && '✓'}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -876,9 +974,8 @@ export default function ControlCenter() {
                       onClick={() => setCombinedDemand(!combinedDemand)}
                       className="w-full flex items-center gap-3 p-3.5 text-left"
                     >
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${
-                        combinedDemand ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-600'
-                      }`}>
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${combinedDemand ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-600'
+                        }`}>
                         {combinedDemand && '✓'}
                       </div>
                       <Cloud size={16} className="text-slate-400" />
@@ -902,9 +999,8 @@ export default function ControlCenter() {
                       onClick={() => setCombinedCapacity(!combinedCapacity)}
                       className="w-full flex items-center gap-3 p-3.5 text-left"
                     >
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${
-                        combinedCapacity ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-600'
-                      }`}>
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${combinedCapacity ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-600'
+                        }`}>
                         {combinedCapacity && '✓'}
                       </div>
                       <Zap size={16} className="text-slate-400" />
@@ -928,9 +1024,8 @@ export default function ControlCenter() {
                       onClick={() => setCombinedPricing(!combinedPricing)}
                       className="w-full flex items-center gap-3 p-3.5 text-left"
                     >
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${
-                        combinedPricing ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-600'
-                      }`}>
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${combinedPricing ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-600'
+                        }`}>
                         {combinedPricing && '✓'}
                       </div>
                       <DollarSign size={16} className="text-slate-400" />
@@ -961,19 +1056,20 @@ export default function ControlCenter() {
             {activeScenarioType !== 'baseline' && (
               <div className="p-5 border-t border-slate-800">
                 {appliedFeedback && (
-                  <div className="mb-3 p-3 bg-emerald-500/15 border border-emerald-500/25 rounded-xl">
+                  <div className="mb-3 p-3 bg-emerald-500/15 border border-emerald-500/25 rounded-xl animate-pulse">
                     <span className="text-emerald-400 text-sm font-medium">{appliedFeedback}</span>
                   </div>
                 )}
                 <button
                   onClick={handleApplyScenario}
                   disabled={state.isRunning}
-                  className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all
+                  className={`group w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all
                     ${state.isRunning
                       ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:opacity-90 shadow-lg shadow-blue-500/20'}`}
+                      : 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 bg-[length:200%_100%] text-white hover:bg-right shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}
+                  style={{ backgroundPosition: '0% 50%', transition: 'all 0.3s ease, background-position 0.5s ease' }}
                 >
-                  <Zap size={16} />
+                  <Zap size={16} className="group-hover:animate-pulse" />
                   Apply Scenario & See Impact
                 </button>
                 <p className="text-xs text-slate-600 mt-2 text-center">
