@@ -102,8 +102,43 @@ export class SimulationEngine {
 
     public setStations(stations: Station[]): void {
         this.state.stations = stations;
+
+        // Populate initial drivers if we don't have any yet
+        if (this.state.drivers.length === 0) {
+            this.populateInitialDrivers(25);
+        }
+
         this.recalculateKPIs();
         this.notifyChange();
+    }
+
+    private populateInitialDrivers(count: number): void {
+        for (let i = 0; i < count; i++) {
+            const pos = randomPosition();
+            const geoPos = percentToGeo(pos.x, pos.y);
+
+            const driver: Driver = {
+                id: generateDriverId(),
+                name: `Rider #${Math.floor(Math.random() * 9000) + 1000}`,
+                position: pos,
+                geoPosition: geoPos,
+                state: 'idle',
+                targetStationId: null,
+                batteryLevel: 10 + Math.random() * 30, // 10-40%
+                waitTime: 0,
+                travelTime: 0,
+                owedAmount: Math.floor(Math.random() * 500),
+                swapsToday: Math.floor(Math.random() * 5),
+            };
+
+            // Select target station
+            const target = this.selectStation(driver);
+            if (target) {
+                driver.targetStationId = target.id;
+                driver.state = 'traveling';
+                this.state.drivers.push(driver);
+            }
+        }
     }
 
     public setWeather(weather: WeatherData): void {
@@ -124,10 +159,10 @@ export class SimulationEngine {
 
     public start(): void {
         if (this.tickInterval) return;
-        
+
         this.state.isRunning = true;
         this.state.isPaused = false;
-        
+
         const tickRate = 1000 / this.state.speed;
         this.tickInterval = setInterval(() => this.tick(), tickRate);
         this.notifyChange();
@@ -145,7 +180,7 @@ export class SimulationEngine {
     public resume(): void {
         if (!this.state.isRunning) return;
         this.state.isPaused = false;
-        
+
         const tickRate = 1000 / this.state.speed;
         this.tickInterval = setInterval(() => this.tick(), tickRate);
         this.notifyChange();
@@ -156,16 +191,16 @@ export class SimulationEngine {
             clearInterval(this.tickInterval);
             this.tickInterval = null;
         }
-        
+
         const stations = this.state.stations;
         const weather = this.state.weather;
         const carbon = this.state.carbon;
-        
+
         this.state = this.createInitialState();
         this.state.stations = stations;
         this.state.weather = weather;
         this.state.carbon = carbon;
-        
+
         // Reset station metrics
         this.state.stations = this.state.stations.map(s => ({
             ...s,
@@ -174,29 +209,29 @@ export class SimulationEngine {
             lostSwaps: 0,
             utilizationRate: 0.3 + Math.random() * 0.4,
         }));
-        
+
         this.recalculateKPIs();
         this.notifyChange();
     }
 
     public setSpeed(speed: number): void {
         this.state.speed = speed;
-        
+
         if (this.tickInterval && !this.state.isPaused) {
             clearInterval(this.tickInterval);
             const tickRate = 1000 / speed;
             this.tickInterval = setInterval(() => this.tick(), tickRate);
         }
-        
+
         this.notifyChange();
     }
 
     private tick(): void {
         // Advance time by 1 minute
         this.state.currentTime = new Date(this.state.currentTime.getTime() + 60000);
-        
+
         // Check for day change
-        if (this.state.currentTime.getHours() === 0 && 
+        if (this.state.currentTime.getHours() === 0 &&
             this.state.currentTime.getMinutes() === 0) {
             this.state.day++;
         }
@@ -219,7 +254,7 @@ export class SimulationEngine {
                 time: new Date(this.state.currentTime),
                 kpis: { ...this.state.kpis },
             });
-            
+
             // Keep only last 2 hours of history
             if (this.state.history.length > 24) {
                 this.state.history = this.state.history.slice(-24);
@@ -234,7 +269,7 @@ export class SimulationEngine {
         const baseDemand = DEMAND_CURVE[hour];
         const weatherMultiplier = this.state.weather?.multiplier || 1.0;
         const stationCount = this.state.stations.filter(s => s.status === 'operational').length;
-        
+
         // Lambda for Poisson distribution
         const lambda = baseDemand * weatherMultiplier * 0.2 * (stationCount / 8);
         const newDriverCount = poissonRandom(lambda);
@@ -242,9 +277,10 @@ export class SimulationEngine {
         for (let i = 0; i < newDriverCount; i++) {
             const pos = randomPosition();
             const geoPos = percentToGeo(pos.x, pos.y);
-            
+
             const driver: Driver = {
                 id: generateDriverId(),
+                name: `Rider #${Math.floor(Math.random() * 9000) + 1000}`,
                 position: pos,
                 geoPosition: geoPos,
                 state: 'idle',
@@ -252,6 +288,8 @@ export class SimulationEngine {
                 batteryLevel: 10 + Math.random() * 30, // 10-40%
                 waitTime: 0,
                 travelTime: 0,
+                owedAmount: Math.floor(Math.random() * 500),
+                swapsToday: Math.floor(Math.random() * 5),
             };
 
             // Select target station
@@ -267,7 +305,7 @@ export class SimulationEngine {
         }
 
         // Remove abandoned and completed drivers older than 10 ticks
-        this.state.drivers = this.state.drivers.filter(d => 
+        this.state.drivers = this.state.drivers.filter(d =>
             d.state !== 'abandoned' && d.state !== 'completed'
         );
     }
@@ -291,7 +329,7 @@ export class SimulationEngine {
         // Take top 3 and do weighted random selection
         const top3 = scored.slice(0, 3);
         const totalInverseScore = top3.reduce((sum, s) => sum + (1 / s.score), 0);
-        
+
         let random = Math.random() * totalInverseScore;
         for (const candidate of top3) {
             random -= 1 / candidate.score;
@@ -344,7 +382,7 @@ export class SimulationEngine {
             driver.position = { ...station.position };
             driver.geoPosition = { ...station.geoPosition };
             driver.travelTime++;
-            
+
             // Check if station has capacity
             if (station.queueLength === 0 && station.currentInventory > 0) {
                 driver.state = 'swapping';
@@ -359,7 +397,7 @@ export class SimulationEngine {
             const normalized = normalize(direction);
             driver.position.x += normalized.x * DRIVER_SPEED;
             driver.position.y += normalized.y * DRIVER_SPEED;
-            
+
             const newGeo = percentToGeo(driver.position.x, driver.position.y);
             driver.geoPosition = newGeo;
             driver.travelTime++;
@@ -394,7 +432,7 @@ export class SimulationEngine {
                 const queuedDrivers = this.state.drivers.filter(
                     d => d.targetStationId === station.id && d.state === 'queued'
                 );
-                
+
                 if (queuedDrivers.length > 0) {
                     const driver = queuedDrivers[0];
                     driver.state = 'swapping';
@@ -404,9 +442,9 @@ export class SimulationEngine {
             }
 
             // Update station metrics
-            station.avgWaitTime = (station.queueLength * AVG_SWAP_DURATION) / 
+            station.avgWaitTime = (station.queueLength * AVG_SWAP_DURATION) /
                 Math.max(1, station.activeChargers);
-            station.utilizationRate = station.chargingBatteries / 
+            station.utilizationRate = station.chargingBatteries /
                 Math.max(1, station.activeChargers);
             station.peakQueueLength = Math.max(station.peakQueueLength, station.queueLength);
 
@@ -423,7 +461,7 @@ export class SimulationEngine {
 
     private recalculateKPIs(): void {
         const operational = this.state.stations.filter(s => s.status !== 'offline');
-        
+
         if (operational.length === 0) {
             this.state.kpis = { ...INITIAL_KPIS };
             return;
@@ -442,7 +480,7 @@ export class SimulationEngine {
             lostSwaps: totalLostSwaps + this.state.kpis.lostSwaps,
             chargerUtilization: (totalUtilization / operational.length) * 100,
             cityThroughput: (totalSwaps / Math.max(1, this.state.day)) * 24,
-            activeDrivers: this.state.drivers.filter(d => 
+            activeDrivers: this.state.drivers.filter(d =>
                 d.state === 'traveling' || d.state === 'queued' || d.state === 'swapping'
             ).length,
             totalStations: this.state.stations.length,
@@ -456,7 +494,7 @@ export class SimulationEngine {
 
     private applyScenarioEffects(): void {
         const scenario = this.state.activeScenario;
-        
+
         switch (scenario.type) {
             case 'failures':
                 // Mark a random station as emergency
@@ -466,7 +504,7 @@ export class SimulationEngine {
                     this.rerouteDrivers(this.state.stations[idx].id);
                 }
                 break;
-                
+
             case 'capacity':
                 // Adjust charger counts
                 const delta = (scenario.params.chargerDelta as number) || 0;
@@ -476,7 +514,7 @@ export class SimulationEngine {
                     activeChargers: Math.max(1, s.activeChargers + delta),
                 }));
                 break;
-                
+
             case 'demand':
                 // Weather already affects demand through weatherMultiplier
                 break;
