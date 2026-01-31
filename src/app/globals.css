@@ -325,6 +325,13 @@ input[type="range"]:focus {
 .custom-station-marker {
   background: none !important;
   border: none !important;
+  overflow: visible !important;
+}
+
+/* Ensure Leaflet marker pane is visible */
+.leaflet-marker-pane {
+  z-index: 600 !important;
+  display: block !important;
 }
 
 /* Leaflet zoom controls dark theme */

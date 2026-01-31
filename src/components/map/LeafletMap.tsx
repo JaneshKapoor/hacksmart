@@ -284,6 +284,10 @@ export default function LeafletMap({
         mapRef.current = map;
 
         return () => {
+            // Clear all marker/line refs so they're recreated on the new map instance
+            stationMarkersRef.current.clear();
+            driverMarkersRef.current.clear();
+            connectionLinesRef.current = [];
             map.remove();
             mapRef.current = null;
         };

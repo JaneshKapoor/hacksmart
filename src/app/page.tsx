@@ -11,18 +11,14 @@ import {
   Play, Pause, RotateCcw, Zap, MapPin, Clock, Battery, Users,
   TrendingUp, TrendingDown, AlertTriangle, ChevronRight, Info,
   BarChart3, Store, Cloud, DollarSign, ArrowUpRight, Shuffle,
-  Activity, Flame, Globe, Cpu
+  Activity, Flame
 } from 'lucide-react';
-
-type DataMode = 'simulation' | 'real';
 
 export default function ControlCenter() {
   const router = useRouter();
   const { state, start, pause, reset, setSpeed, setScenario, applyInterventions, loadStations, weatherData, carbonData } = useSimulation();
   const [activeScenarioType, setActiveScenarioType] = useState<ScenarioType>('baseline');
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
-  const [dataMode, setDataMode] = useState<DataMode>('simulation');
-  const [isLoadingReal, setIsLoadingReal] = useState(false);
   const [realStationCount, setRealStationCount] = useState(0);
 
   // Scenario parameters
@@ -74,35 +70,21 @@ export default function ControlCenter() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Handle data mode switch
-  const handleDataModeChange = async (mode: DataMode) => {
-    if (mode === dataMode) return;
-
-    if (mode === 'real') {
-      setIsLoadingReal(true);
-      setDataMode(mode);
+  // Auto-load real station data on mount
+  useEffect(() => {
+    (async () => {
       try {
         const stations = await fetchRealStations();
         if (stations.length > 0) {
           loadStations(stations);
           setRealStationCount(stations.length);
           setTargetStationId(stations[0].id);
-        } else {
-          // No stations returned, revert
-          setDataMode('simulation');
         }
       } catch (err) {
-        console.error('Failed to load real stations:', err);
-        setDataMode('simulation');
-      } finally {
-        setIsLoadingReal(false);
+        console.error('Failed to load real stations, using simulated data:', err);
       }
-    } else {
-      setDataMode(mode);
-      loadStations(undefined); // Reset to mock data
-      setTargetStationId('station-1');
-    }
-  };
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!state) {
     return (
@@ -412,28 +394,6 @@ export default function ControlCenter() {
                 <span>{carbonData.carbonIntensity} gCO2</span>
               </div>
             )}
-
-            <div className="flex items-center bg-slate-800/80 rounded-xl border border-slate-700/50 p-1">
-              <button
-                onClick={() => handleDataModeChange('simulation')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${dataMode === 'simulation'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
-              >
-                <Cpu size={15} />
-                Sim
-              </button>
-              <button
-                onClick={() => handleDataModeChange('real')}
-                disabled={isLoadingReal}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${dataMode === 'real'
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-sm shadow-emerald-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'} ${isLoadingReal ? 'opacity-50' : ''}`}
-              >
-                <Globe size={15} className={dataMode === 'real' ? 'animate-pulse' : ''} />
-                {isLoadingReal ? '...' : 'Real'}
-              </button>
-            </div>
 
             <button
               onClick={() => router.push('/analytics')}
@@ -1128,7 +1088,7 @@ export default function ControlCenter() {
         </div>
 
         {/* Map Panel */}
-        <div className="flex-1 relative isolate">
+        <div className="flex-1 relative">
           {/* Map */}
           <div className="h-full w-full">
             <LeafletMap
@@ -1144,12 +1104,10 @@ export default function ControlCenter() {
             <div className="flex items-center gap-3">
               <MapPin className="text-blue-400" size={16} />
               <div>
-                <h2 className="font-semibold text-sm text-white">
-                  {dataMode === 'real' ? 'Live Station Network' : 'Simulated Network'}
-                </h2>
+                <h2 className="font-semibold text-sm text-white">Live Station Network</h2>
                 <p className="text-xs text-slate-400">
                   {state.stations.filter(s => s.status !== 'offline').length} of {state.stations.length} stations operational
-                  {dataMode === 'real' && realStationCount > 0 && ` (${realStationCount} from Open Charge Map)`}
+                  {realStationCount > 0 && ` (${realStationCount} from Open Charge Map)`}
                 </p>
               </div>
             </div>
