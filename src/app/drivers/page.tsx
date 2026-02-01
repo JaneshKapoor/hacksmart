@@ -4,7 +4,7 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { Driver, DriverState } from '@/simulation/types';
-import { Battery, Navigation, Clock, DollarSign, Zap, AlertTriangle } from 'lucide-react';
+import { Battery, Navigation, Clock, Zap, AlertTriangle } from 'lucide-react';
 
 const stateColors: Record<DriverState, string> = {
     idle: 'var(--text-muted)',
@@ -138,15 +138,12 @@ function DriverRow({ driver, stations }: { driver: Driver; stations: any[] }) {
 
             {/* Owed Amount */}
             <td style={{ padding: 'var(--space-sm) var(--space-md)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
-                    <DollarSign size={16} color="var(--text-muted)" />
-                    <span style={{
-                        fontSize: 'var(--font-sm)',
-                        color: 'var(--text-primary)',
-                    }}>
-                        ₹{driver.owedAmount.toFixed(2)}
-                    </span>
-                </div>
+                <span style={{
+                    fontSize: 'var(--font-sm)',
+                    color: 'var(--text-primary)',
+                }}>
+                    ₹ {driver.owedAmount.toFixed(2)}
+                </span>
             </td>
         </tr>
     );
