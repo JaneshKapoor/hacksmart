@@ -425,11 +425,11 @@ export class SimulationEngine {
         } else if (inventoryPercent < 0.2) {
             // Critical low inventory < 20% (orange)
             station.status = 'overloaded';
-        } else if (inventoryPercent < 0.5) {
-            // Low inventory 20-50% (yellow)
+        } else if (inventoryPercent < 0.6) {
+            // Low inventory 20-60% (yellow)
             station.status = 'low-stock';
         } else {
-            // Healthy inventory > 50% (green)
+            // Healthy inventory >= 60% (green)
             station.status = 'operational';
         }
     }
@@ -579,7 +579,7 @@ export class SimulationEngine {
                 station.status = 'overloaded';
             } else if (inventoryPercent < 0.2) {
                 station.status = 'overloaded';
-            } else if (inventoryPercent < 0.5) {
+            } else if (inventoryPercent < 0.6) {
                 station.status = 'low-stock';
             } else {
                 station.status = 'operational';
