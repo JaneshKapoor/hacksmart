@@ -91,7 +91,7 @@ export class SimulationEngine {
             kpis: { ...INITIAL_KPIS },
             weather: null,
             carbon: null,
-            activeScenario: { type: 'baseline', active: true, params: {} },
+            activeScenario: { type: 'demand', active: true, params: {} },
             history: [],
         };
     }
@@ -159,6 +159,24 @@ export class SimulationEngine {
     public setScenario(scenario: Scenario): void {
         this.state.activeScenario = scenario;
         this.applyScenarioEffects();
+        this.notifyChange();
+    }
+
+    public resetScenario(): void {
+        // Clear all emergency statuses and restore proper status based on inventory
+        for (const station of this.state.stations) {
+            if (station.status === 'emergency') {
+                // Force status to operational first so updateStationStatus doesn't skip it
+                station.status = 'operational';
+                this.updateStationStatus(station);
+            }
+        }
+
+        // Reset scenario to default demand
+        this.state.activeScenario = { type: 'demand', active: true, params: {} };
+        this.state.kpis.reroutedDrivers = 0;
+
+        this.recalculateKPIs();
         this.notifyChange();
     }
 

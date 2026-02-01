@@ -30,7 +30,7 @@ const MapView = dynamic(() => import('@/components/MapView').then(mod => ({ defa
 });
 
 export default function Dashboard() {
-    const { state, isLoading, error, toggleSimulation, reset, setSpeed, setScenario, toggleStationFailure } = useSimulation();
+    const { state, isLoading, error, toggleSimulation, reset, setSpeed, setScenario, resetScenario, toggleStationFailure } = useSimulation();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [metricsCollapsed, setMetricsCollapsed] = useState(false);
     const [performanceCollapsed, setPerformanceCollapsed] = useState(false);
@@ -98,6 +98,7 @@ export default function Dashboard() {
                         <Scenarios
                             activeScenario={activeScenario}
                             onScenarioChange={setScenario}
+                            onResetScenario={resetScenario}
                             selectedStationId={selectedStation}
                             onToggleFailure={toggleStationFailure}
                         />

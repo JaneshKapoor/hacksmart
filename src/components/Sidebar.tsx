@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     LayoutGrid,
-    BarChart3,
-    Settings,
+    Users,
     LogOut,
 } from 'lucide-react';
 import { logout } from '@/app/login/actions';
@@ -17,8 +16,7 @@ interface SidebarProps {
 
 const navItems = [
     { id: 'dashboard', icon: LayoutGrid, label: 'Dashboard', path: '/' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics', path: '/' },
-    { id: 'settings', icon: Settings, label: 'Settings', path: '/' },
+    { id: 'drivers', icon: Users, label: 'Drivers', path: '/drivers' },
 ];
 
 export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) {
@@ -26,6 +24,7 @@ export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) 
     const router = useRouter();
 
     const handleNavClick = (item: typeof navItems[0]) => {
+        router.push(item.path);
         onTabChange?.(item.id);
     };
 

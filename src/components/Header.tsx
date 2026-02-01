@@ -94,6 +94,50 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                     Day {day}
                 </span>
+
+                {/* Speed Selector */}
+                <div style={{
+                    display: 'flex',
+                    gap: 'var(--space-xs)',
+                    marginLeft: 'var(--space-xs)',
+                    borderLeft: '1px solid var(--border-subtle)',
+                    paddingLeft: 'var(--space-md)',
+                }}>
+                    <button
+                        onClick={() => onSpeedChange(0.5)}
+                        style={{
+                            padding: 'var(--space-xs) var(--space-sm)',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            background: state?.speed === 0.5 ? 'var(--brand-primary)' : 'var(--bg-secondary)',
+                            color: state?.speed === 0.5 ? 'white' : 'var(--text-muted)',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer',
+                            transition: 'all var(--transition-fast)',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        0.5x
+                    </button>
+                    <button
+                        onClick={() => onSpeedChange(1)}
+                        style={{
+                            padding: 'var(--space-xs) var(--space-sm)',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            background: state?.speed === 1 ? 'var(--brand-primary)' : 'var(--bg-secondary)',
+                            color: state?.speed === 1 ? 'white' : 'var(--text-muted)',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer',
+                            transition: 'all var(--transition-fast)',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        1x
+                    </button>
+                </div>
             </div>
 
             {/* Right side container */}

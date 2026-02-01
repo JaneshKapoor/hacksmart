@@ -3,12 +3,14 @@
 import {
     TrendingUp,
     AlertTriangle,
+    RotateCcw,
 } from 'lucide-react';
 import { ScenarioType, Scenario } from '@/simulation/types';
 
 interface ScenariosProps {
     activeScenario: Scenario;
     onScenarioChange: (scenario: Scenario) => void;
+    onResetScenario: () => void;
     selectedStationId?: string | null;
     onToggleFailure?: (stationId: string) => void;
 }
@@ -24,7 +26,7 @@ const scenarios: ScenarioTabData[] = [
     { type: 'failures', icon: <AlertTriangle size={14} />, label: 'Failures' },
 ];
 
-export function Scenarios({ activeScenario, onScenarioChange, selectedStationId, onToggleFailure }: ScenariosProps) {
+export function Scenarios({ activeScenario, onScenarioChange, onResetScenario, selectedStationId, onToggleFailure }: ScenariosProps) {
     const handleScenarioClick = (scenarioType: ScenarioType) => {
         // Special handling for Failures scenario
         if (scenarioType === 'failures') {
@@ -44,15 +46,52 @@ export function Scenarios({ activeScenario, onScenarioChange, selectedStationId,
         }
     };
 
+    const handleReset = () => {
+        onResetScenario();
+    };
+
     return (
         <div className="card" style={{ padding: 'var(--space-md)' }}>
-            <div className="card-header" style={{ marginBottom: 'var(--space-md)' }}>
-                <span className="card-title">Scenarios</span>
-                {selectedStationId && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        Station selected
-                    </div>
-                )}
+            <div className="card-header" style={{
+                marginBottom: 'var(--space-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+            }}>
+                <div>
+                    <span className="card-title">Scenarios</span>
+                    {selectedStationId && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            Station selected
+                        </div>
+                    )}
+                </div>
+                <button
+                    onClick={handleReset}
+                    style={{
+                        padding: 'var(--space-xs)',
+                        background: 'transparent',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-muted)',
+                        transition: 'all var(--transition-fast)',
+                    }}
+                    title="Reset scenarios"
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
+                        e.currentTarget.style.color = 'var(--text-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--text-muted)';
+                    }}
+                >
+                    <RotateCcw size={14} />
+                </button>
             </div>
 
             <div
