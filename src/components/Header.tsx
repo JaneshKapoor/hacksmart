@@ -83,6 +83,16 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                     {isRunning ? <Pause size={16} /> : <Play size={16} />}
                     <span>{isRunning ? 'Pause' : 'Run Simulation'}</span>
                 </button>
+
+                {/* Reset Button */}
+                <button
+                    className="btn btn-ghost"
+                    onClick={onReset}
+                    style={{ padding: 'var(--space-xs) var(--space-sm)' }}
+                    title="Reset Simulation"
+                >
+                    <RotateCcw size={16} />
+                </button>
             </div>
 
             {/* Center: Time & Status */}
