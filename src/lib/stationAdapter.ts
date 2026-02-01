@@ -93,7 +93,8 @@ function generateSimulationValues(chargers: number) {
         utilizationRate: Math.min(0.99, utilizationRate),
         avgWaitTime: Math.max(0.5, queueLength * 1.5 + Math.random() * 2),
         totalSwaps: Math.floor(Math.random() * 200) + 50,
-        lostSwaps: Math.floor(Math.random() * 10),
+        swapsThisHour: 0,
+        lostSwaps: 0, // Start at 0 - only count real failed rides during simulation
         peakQueueLength: queueLength + Math.floor(Math.random() * 5),
     };
 }
@@ -137,6 +138,7 @@ export function adaptOCMStations(ocmStations: OCMStation[]): Station[] {
                 chargerType: getChargerType(ocm.Connections),
                 bays: chargers * 5,
                 ...simValues,
+                chargingQueue: [], // Initialize empty charging queue
                 status: ocm.StatusType?.IsOperational === false ? 'offline' : 'operational',
                 operatingHours: { start: 0, end: 24 },
                 coverageRadius: chargers >= 10 ? 4 : chargers >= 6 ? 3 : 2,

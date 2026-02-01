@@ -82,15 +82,18 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
                 // Try to load stations from Supabase first
                 let stations = await loadStationsFromDB();
 
-                // If no stations in DB, fetch from API and save
-                if (stations.length === 0) {
-                    console.log('No stations in DB, fetching from API...');
+                // Check if stations have connection details
+                const hasConnectionDetails = stations.length > 0 && stations.some(s => s.connectionDetails && s.connectionDetails.length > 0);
+
+                // If no stations in DB or missing connection details, fetch from API and save
+                if (stations.length === 0 || !hasConnectionDetails) {
+                    console.log(stations.length === 0 ? 'No stations in DB, fetching from API...' : 'Stations missing connection details, refreshing from API...');
                     stations = await fetchRealStations();
 
                     if (stations.length > 0) {
                         // Save to Supabase for future use
                         await saveStationsToDB(stations);
-                        console.log('Saved stations to Supabase');
+                        console.log('Saved stations to Supabase with connection details');
                     }
                 } else {
                     console.log(`Loaded ${stations.length} stations from Supabase`);

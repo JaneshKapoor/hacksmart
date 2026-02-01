@@ -105,7 +105,7 @@ export function stationToDB(station: Station): Omit<DBStation, 'id' | 'created_a
     };
 }
 
-// Convert DB format to Station
+// Convert DB format to Station (without connectionDetails - loaded separately)
 export function dbToStation(db: DBStation): Station {
     return {
         id: db.id,
@@ -126,11 +126,13 @@ export function dbToStation(db: DBStation): Station {
         inventoryCap: db.inventory_cap,
         currentInventory: db.current_inventory,
         chargingBatteries: db.charging_batteries,
+        chargingQueue: [], // Initialize empty, will be populated during simulation
         bays: db.bays,
         queueLength: db.queue_length,
         utilizationRate: db.utilization_rate,
         avgWaitTime: db.avg_wait_time,
         totalSwaps: db.total_swaps,
+        swapsThisHour: 0, // Reset for current hour
         lostSwaps: db.lost_swaps,
         peakQueueLength: db.peak_queue_length,
         status: db.status as any,
@@ -141,7 +143,7 @@ export function dbToStation(db: DBStation): Station {
         coverageRadius: db.coverage_radius,
         usageCost: db.usage_cost || undefined,
         isRealStation: db.is_real_station,
-        connectionDetails: undefined, // TODO: Load from station_connections table
+        connectionDetails: undefined, // Will be loaded separately
     };
 }
 
@@ -193,14 +195,26 @@ export async function saveStationsToDB(stations: Station[]): Promise<{ success: 
         const dbStations = stations.map(stationToDB);
 
         // Upsert stations (insert or update based on ocm_id)
-        const { error } = await supabase
+        const { data: upsertedStations, error } = await supabase
             .from('stations')
             .upsert(dbStations, {
                 onConflict: 'ocm_id',
                 ignoreDuplicates: false,
-            });
+            })
+            .select();
 
         if (error) throw error;
+
+        // Save connection details for each station
+        if (upsertedStations) {
+            for (let i = 0; i < stations.length; i++) {
+                const station = stations[i];
+                const dbStation = upsertedStations[i];
+                if (dbStation && station.connectionDetails) {
+                    await saveStationConnections(dbStation.id, station.connectionDetails);
+                }
+            }
+        }
 
         return { success: true };
     } catch (error: any) {
@@ -221,10 +235,73 @@ export async function loadStationsFromDB(): Promise<Station[]> {
         if (error) throw error;
         if (!data || data.length === 0) return [];
 
-        return data.map(dbToStation);
+        const stations = data.map(dbToStation);
+
+        // Load connection details for each station
+        for (const station of stations) {
+            const connectionDetails = await loadStationConnections(station.id);
+            station.connectionDetails = connectionDetails.length > 0 ? connectionDetails : undefined;
+        }
+
+        return stations;
     } catch (error) {
         console.error('Failed to load stations from DB:', error);
         return [];
+    }
+}
+
+// Load connection details for a station
+async function loadStationConnections(stationId: string) {
+    try {
+        const supabase = createClient();
+
+        const { data, error } = await supabase
+            .from('station_connections')
+            .select('*')
+            .eq('station_id', stationId);
+
+        if (error) throw error;
+        if (!data || data.length === 0) return [];
+
+        return data.map(conn => ({
+            type: conn.connection_type,
+            powerKW: conn.power_kw,
+            quantity: conn.quantity,
+        }));
+    } catch (error) {
+        console.error('Failed to load station connections:', error);
+        return [];
+    }
+}
+
+// Save connection details for a station
+async function saveStationConnections(stationId: string, connectionDetails?: { type: string; powerKW: number; quantity: number }[]) {
+    try {
+        const supabase = createClient();
+
+        // Delete existing connections for this station
+        await supabase
+            .from('station_connections')
+            .delete()
+            .eq('station_id', stationId);
+
+        // Insert new connections if any
+        if (connectionDetails && connectionDetails.length > 0) {
+            const dbConnections = connectionDetails.map(conn => ({
+                station_id: stationId,
+                connection_type: conn.type,
+                power_kw: conn.powerKW,
+                quantity: conn.quantity,
+            }));
+
+            const { error } = await supabase
+                .from('station_connections')
+                .insert(dbConnections);
+
+            if (error) throw error;
+        }
+    } catch (error) {
+        console.error('Failed to save station connections:', error);
     }
 }
 

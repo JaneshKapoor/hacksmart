@@ -35,10 +35,12 @@ export interface Station {
     inventoryCap: number;
     currentInventory: number;
     chargingBatteries: number;
+    chargingQueue: number[]; // Array of tick times when each battery will finish charging
     queueLength: number;
     utilizationRate: number;
     avgWaitTime: number;
     totalSwaps: number;
+    swapsThisHour: number; // Swaps completed in the current hour (for real-time throughput)
     lostSwaps: number;
     peakQueueLength: number;
     status: StationStatus;

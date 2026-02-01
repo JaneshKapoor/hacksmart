@@ -23,8 +23,7 @@ import { geoToPercent, percentToGeo, haversine } from '@/lib/geoUtils';
 
 const DRIVER_SPEED = 8; // units per minute
 const AVG_SWAP_DURATION = 4; // minutes
-const CHARGE_COMPLETION_PROBABILITY_BASE = 0.06;
-const MAX_CHARGE_COMPLETION_PROBABILITY = 0.95;
+const BATTERY_CHARGE_TIME = 60; // minutes (1 hour to fully charge a battery)
 
 // Battery-aware routing constants
 const BATTERY_CRITICAL = 15;
@@ -138,6 +137,13 @@ export class SimulationEngine {
 
     public setStations(stations: Station[]): void {
         this.state.stations = stations;
+
+        // Initialize charging queue for all stations if it doesn't exist
+        for (const station of this.state.stations) {
+            if (!station.chargingQueue) {
+                station.chargingQueue = [];
+            }
+        }
 
         // Calculate initial status for all stations based on inventory
         this.updateStationStatuses();
@@ -305,7 +311,9 @@ export class SimulationEngine {
         this.state.stations = this.state.stations.map(s => ({
             ...s,
             queueLength: 0,
+            chargingQueue: [],
             totalSwaps: Math.floor(Math.random() * 200) + 50,
+            swapsThisHour: 0,
             lostSwaps: 0,
             utilizationRate: 0.3 + Math.random() * 0.4,
         }));
@@ -337,6 +345,13 @@ export class SimulationEngine {
         if (this.state.currentTime.getHours() === 0 &&
             this.state.currentTime.getMinutes() === 0) {
             this.state.day++;
+        }
+
+        // Reset hourly swap counters at the top of each hour
+        if (this.state.currentTime.getMinutes() === 0) {
+            for (const station of this.state.stations) {
+                station.swapsThisHour = 0;
+            }
         }
 
         // Generate new drivers (demand)
@@ -476,7 +491,6 @@ export class SimulationEngine {
         );
 
         if (operational.length === 0) {
-            this.state.kpis.lostSwaps++;
             return null;
         }
 
@@ -603,7 +617,18 @@ export class SimulationEngine {
                         const station = this.state.stations.find(s => s.id === driver.targetStationId);
                         if (station) {
                             station.totalSwaps++;
+                            station.swapsThisHour = (station.swapsThisHour || 0) + 1; // Track hourly swaps
                             station.currentInventory = Math.max(0, station.currentInventory - 1);
+
+                            // Initialize charging queue if it doesn't exist (for backward compatibility)
+                            if (!station.chargingQueue) {
+                                station.chargingQueue = [];
+                            }
+
+                            // Add depleted battery to charging queue (will be ready in 60 minutes)
+                            const chargeCompletionTick = this.currentTick + BATTERY_CHARGE_TIME;
+                            station.chargingQueue.push(chargeCompletionTick);
+                            station.chargingBatteries = station.chargingQueue.length;
                         }
                     }
                     break;
@@ -664,7 +689,6 @@ export class SimulationEngine {
                 driver.state = 'abandoned';
                 driver.stateChangeTime = this.currentTick;
                 this.recordFailedRide(driver, 'stranded', false);
-                this.state.kpis.lostSwaps++;
                 return;
             }
 
@@ -673,7 +697,6 @@ export class SimulationEngine {
                 driver.state = 'abandoned';
                 driver.stateChangeTime = this.currentTick;
                 this.recordFailedRide(driver, 'low_battery', false);
-                this.state.kpis.lostSwaps++;
                 return;
             }
         }
@@ -711,24 +734,31 @@ export class SimulationEngine {
         for (const station of this.state.stations) {
             if (station.status === 'emergency' || station.status === 'offline') continue;
 
-            // Battery charging simulation
-            const chargeProb = Math.min(
-                MAX_CHARGE_COMPLETION_PROBABILITY,
-                station.activeChargers * CHARGE_COMPLETION_PROBABILITY_BASE
-            );
-
-            if (Math.random() < chargeProb && station.chargingBatteries > 0) {
-                station.currentInventory = Math.min(
-                    station.inventoryCap,
-                    station.currentInventory + 1
-                );
-                station.chargingBatteries--;
+            // Initialize charging queue if it doesn't exist (for backward compatibility)
+            if (!station.chargingQueue) {
+                station.chargingQueue = [];
             }
 
-            // Refill chargers from uncharged pool (15% chance per tick)
-            if (Math.random() < 0.15 && station.chargingBatteries < station.activeChargers) {
-                station.chargingBatteries++;
+            // Process charging queue - check if any batteries finished charging
+            const completedBatteries: number[] = [];
+            station.chargingQueue = station.chargingQueue.filter((completionTick) => {
+                if (this.currentTick >= completionTick) {
+                    // Battery finished charging
+                    completedBatteries.push(completionTick);
+                    return false; // Remove from queue
+                }
+                return true; // Keep in queue
+            });
+
+            // Add completed batteries to inventory (up to capacity)
+            for (let i = 0; i < completedBatteries.length; i++) {
+                if (station.currentInventory < station.inventoryCap) {
+                    station.currentInventory++;
+                }
             }
+
+            // Update charging batteries count
+            station.chargingBatteries = station.chargingQueue.length;
 
             // Process queue
             if (station.queueLength > 0 && station.currentInventory > 0) {
@@ -782,7 +812,7 @@ export class SimulationEngine {
     }
 
     private recalculateKPIs(): void {
-        const operational = this.state.stations.filter(s => s.status !== 'offline');
+        const operational = this.state.stations.filter(s => s.status !== 'offline' && s.status !== 'emergency');
 
         if (operational.length === 0) {
             this.state.kpis = { ...INITIAL_KPIS };
@@ -792,16 +822,22 @@ export class SimulationEngine {
         const totalWaitTime = operational.reduce((sum, s) => sum + s.avgWaitTime, 0);
         const totalUtilization = operational.reduce((sum, s) => sum + s.utilizationRate, 0);
         const totalSwaps = operational.reduce((sum, s) => sum + s.totalSwaps, 0);
+        const swapsThisHour = operational.reduce((sum, s) => sum + (s.swapsThisHour || 0), 0);
         const totalInventory = operational.reduce((sum, s) => sum + s.currentInventory, 0);
         const totalCapacity = operational.reduce((sum, s) => sum + s.inventoryCap, 0);
-        const totalLostSwaps = operational.reduce((sum, s) => sum + s.lostSwaps, 0);
         const peakWait = Math.max(...operational.map(s => s.avgWaitTime));
+
+        // Calculate current minute of the hour to prorate the throughput
+        const minutesIntoHour = this.state.currentTime.getMinutes();
+        const hourlyRate = minutesIntoHour > 0
+            ? (swapsThisHour / minutesIntoHour) * 60
+            : swapsThisHour * 60; // If at start of hour, assume current rate for full hour
 
         this.state.kpis = {
             avgWaitTime: totalWaitTime / operational.length,
-            lostSwaps: totalLostSwaps + this.state.kpis.lostSwaps,
+            lostSwaps: this.state.failedRides.length, // Use accurate failed rides count
             chargerUtilization: (totalUtilization / operational.length) * 100,
-            cityThroughput: (totalSwaps / Math.max(1, this.state.day)) * 24,
+            cityThroughput: hourlyRate,
             activeDrivers: this.state.drivers.filter(d =>
                 d.state === 'traveling' || d.state === 'queued' || d.state === 'swapping'
             ).length,
@@ -864,7 +900,6 @@ export class SimulationEngine {
             if (driver.rerouteAttempts > 3) {
                 driver.state = 'abandoned';
                 driver.stateChangeTime = this.currentTick;
-                this.state.kpis.lostSwaps++;
                 this.recordFailedRide(driver, 'multiple_reroutes', true);
                 continue;
             }
@@ -884,7 +919,6 @@ export class SimulationEngine {
                     // Insufficient battery to reach new station
                     driver.state = 'abandoned';
                     driver.stateChangeTime = this.currentTick;
-                    this.state.kpis.lostSwaps++;
                     batteryInsufficientCount++;
                     this.recordFailedRide(driver, 'station_too_far', true);
                     console.warn(
@@ -896,7 +930,6 @@ export class SimulationEngine {
                 // No reachable station found
                 driver.state = 'abandoned';
                 driver.stateChangeTime = this.currentTick;
-                this.state.kpis.lostSwaps++;
 
                 // Determine if it's battery or availability issue
                 const anyOperational = this.state.stations.some(s => s.status === 'operational' && s.currentInventory > 0);
@@ -923,7 +956,6 @@ export class SimulationEngine {
             if (driver.rerouteAttempts > 3) {
                 driver.state = 'abandoned';
                 driver.stateChangeTime = this.currentTick;
-                this.state.kpis.lostSwaps++;
                 this.recordFailedRide(driver, 'multiple_reroutes', true);
                 // Still decrement queue
                 if (failedStation) {
@@ -956,7 +988,6 @@ export class SimulationEngine {
                     // Insufficient battery to reach new station
                     driver.state = 'abandoned';
                     driver.stateChangeTime = this.currentTick;
-                    this.state.kpis.lostSwaps++;
                     batteryInsufficientCount++;
                     this.recordFailedRide(driver, 'station_too_far', true);
                     console.warn(
@@ -968,7 +999,6 @@ export class SimulationEngine {
                 // No reachable station found
                 driver.state = 'abandoned';
                 driver.stateChangeTime = this.currentTick;
-                this.state.kpis.lostSwaps++;
 
                 // Determine if it's battery or availability issue
                 const anyOperational = this.state.stations.some(s => s.status === 'operational' && s.currentInventory > 0);

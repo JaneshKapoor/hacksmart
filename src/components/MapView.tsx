@@ -128,14 +128,15 @@ export function MapView({ stations, drivers, onStationClick, onMapClick, selecte
                     >
                         <Popup>
                             <div style={{
-                                padding: '8px',
-                                minWidth: '180px',
+                                padding: '12px',
+                                minWidth: '280px',
                                 color: 'var(--text-primary)',
                             }}>
+                                {/* Header */}
                                 <div style={{
                                     fontWeight: 600,
-                                    fontSize: '0.9rem',
-                                    marginBottom: '8px',
+                                    fontSize: '1rem',
+                                    marginBottom: '4px',
                                     color: '#fff',
                                 }}>
                                     {station.name}
@@ -143,22 +144,98 @@ export function MapView({ stations, drivers, onStationClick, onMapClick, selecte
                                 <div style={{
                                     fontSize: '0.75rem',
                                     color: '#a0aec0',
-                                    marginBottom: '8px',
+                                    marginBottom: '12px',
                                 }}>
                                     {station.location}
                                 </div>
+
+                                {/* Operator & Address */}
+                                {(station.operator || station.address) && (
+                                    <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #374151' }}>
+                                        {station.operator && (
+                                            <div style={{ fontSize: '0.75rem', color: '#a0aec0', marginBottom: '4px' }}>
+                                                <span style={{ color: '#10b981' }}>⚡</span> {station.operator}
+                                            </div>
+                                        )}
+                                        {station.address && (
+                                            <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
+                                                📍 {station.address}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Equipment Details */}
+                                {station.connectionDetails && station.connectionDetails.length > 0 && (
+                                    <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #374151' }}>
+                                        <div style={{
+                                            fontSize: '0.8rem',
+                                            fontWeight: 600,
+                                            color: '#d1d5db',
+                                            marginBottom: '8px',
+                                            letterSpacing: '0.5px'
+                                        }}>
+                                            EQUIPMENT DETAILS
+                                        </div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '1fr 1fr',
+                                            gap: '6px',
+                                            fontSize: '0.75rem',
+                                            marginBottom: '8px'
+                                        }}>
+                                            <div style={{ color: '#a0aec0' }}>Number Of Stations/Bays:</div>
+                                            <div style={{ color: '#fff', fontWeight: 600 }}>{station.chargers}</div>
+                                        </div>
+                                        {station.connectionDetails.map((conn, idx) => (
+                                            <div key={idx} style={{
+                                                fontSize: '0.75rem',
+                                                marginBottom: '6px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}>
+                                                <span style={{ color: '#3b82f6', fontWeight: 600 }}>{conn.quantity} ×</span>
+                                                <span style={{ color: '#10b981', fontWeight: 600 }}>{conn.powerKW} kW</span>
+                                                <span style={{ color: '#fff', fontWeight: 600 }}>{conn.powerKW >= 43 ? 'DC' : 'AC'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Simulation Stats */}
                                 <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr 1fr',
-                                    gap: '4px',
-                                    fontSize: '0.7rem',
+                                    paddingTop: '12px',
+                                    borderTop: '1px solid #374151'
                                 }}>
-                                    <div style={{ color: '#a0aec0' }}>Inventory:</div>
-                                    <div style={{ color: '#fff' }}>{station.currentInventory}/{station.inventoryCap}</div>
-                                    <div style={{ color: '#a0aec0' }}>Queue:</div>
-                                    <div style={{ color: '#fff' }}>{station.queueLength}</div>
-                                    <div style={{ color: '#a0aec0' }}>Swaps:</div>
-                                    <div style={{ color: '#fff' }}>{station.totalSwaps}</div>
+                                    <div style={{
+                                        fontSize: '0.8rem',
+                                        fontWeight: 600,
+                                        color: '#d1d5db',
+                                        marginBottom: '8px',
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        LIVE STATS
+                                    </div>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '6px',
+                                        fontSize: '0.75rem',
+                                    }}>
+                                        <div style={{ color: '#a0aec0' }}>Battery Inventory:</div>
+                                        <div style={{ color: '#fff', fontWeight: 600 }}>{station.currentInventory}/{station.inventoryCap}</div>
+                                        <div style={{ color: '#a0aec0' }}>Queue Length:</div>
+                                        <div style={{ color: '#fff', fontWeight: 600 }}>{station.queueLength}</div>
+                                        <div style={{ color: '#a0aec0' }}>Total Swaps:</div>
+                                        <div style={{ color: '#fff', fontWeight: 600 }}>{station.totalSwaps}</div>
+                                        {station.usageCost && (
+                                            <>
+                                                <div style={{ color: '#a0aec0' }}>Usage Cost:</div>
+                                                <div style={{ color: '#fbbf24', fontWeight: 600 }}>{station.usageCost}</div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </Popup>
