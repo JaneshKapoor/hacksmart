@@ -130,8 +130,13 @@ function FailedRideRow({ ride }: { ride: FailedRide }) {
             </td>
 
             <td style={{ padding: 'var(--space-sm) var(--space-md)' }}>
-                {ride.targetStationDistance != null ? (() => {
-                    const batteryNeeded = (ride.targetStationDistance! / 1.5) * 1.2;
+                {(() => {
+                    const nearestOperational = ride.nearbyStations.find(s => s.status === 'operational');
+                    const distance = ride.targetStationDistance ?? nearestOperational?.distance ?? null;
+                    if (distance == null) {
+                        return <span style={{ fontSize: 'var(--font-sm)', color: 'var(--text-muted)' }}>N/A</span>;
+                    }
+                    const batteryNeeded = (distance / 1.5) * 1.2;
                     const deficit = batteryNeeded - ride.batteryLevel;
                     return (
                         <div>
@@ -151,9 +156,7 @@ function FailedRideRow({ ride }: { ride: FailedRide }) {
                             )}
                         </div>
                     );
-                })() : (
-                    <span style={{ fontSize: 'var(--font-sm)', color: 'var(--text-muted)' }}>N/A</span>
-                )}
+                })()}
             </td>
 
             <td style={{ padding: 'var(--space-sm) var(--space-md)' }}>
