@@ -30,10 +30,11 @@ const MapView = dynamic(() => import('@/components/MapView').then(mod => ({ defa
 });
 
 export default function Dashboard() {
-    const { state, isLoading, error, toggleSimulation, reset, setSpeed, setScenario } = useSimulation();
+    const { state, isLoading, error, toggleSimulation, reset, setSpeed, setScenario, toggleStationFailure } = useSimulation();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [metricsCollapsed, setMetricsCollapsed] = useState(false);
     const [performanceCollapsed, setPerformanceCollapsed] = useState(false);
+    const [selectedStation, setSelectedStation] = useState<string | null>(null);
 
     // Use initial values while loading
     const kpis = state?.kpis || INITIAL_KPIS;
@@ -97,6 +98,8 @@ export default function Dashboard() {
                         <Scenarios
                             activeScenario={activeScenario}
                             onScenarioChange={setScenario}
+                            selectedStationId={selectedStation}
+                            onToggleFailure={toggleStationFailure}
                         />
 
                         {/* Network Health */}
@@ -158,6 +161,9 @@ export default function Dashboard() {
                                 <MapView
                                     stations={stations}
                                     drivers={drivers}
+                                    onStationClick={(station) => setSelectedStation(station.id)}
+                                    onMapClick={() => setSelectedStation(null)}
+                                    selectedStationId={selectedStation}
                                 />
                             )}
                         </div>

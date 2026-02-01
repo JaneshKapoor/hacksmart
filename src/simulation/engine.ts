@@ -103,6 +103,9 @@ export class SimulationEngine {
     public setStations(stations: Station[]): void {
         this.state.stations = stations;
 
+        // Calculate initial status for all stations based on inventory
+        this.updateStationStatuses();
+
         // Populate initial drivers if we don't have any yet
         if (this.state.drivers.length === 0) {
             // Randomize initial driver count between 15-40 drivers
@@ -409,9 +412,37 @@ export class SimulationEngine {
         }
     }
 
+    private updateStationStatus(station: Station): void {
+        // Skip if station is in emergency or offline state
+        if (station.status === 'emergency' || station.status === 'offline') return;
+
+        // Update status based on conditions (multi-level system)
+        const inventoryPercent = station.currentInventory / station.inventoryCap;
+
+        if (station.queueLength > station.activeChargers * 2) {
+            // Queue is overloaded (orange)
+            station.status = 'overloaded';
+        } else if (inventoryPercent < 0.2) {
+            // Critical low inventory < 20% (orange)
+            station.status = 'overloaded';
+        } else if (inventoryPercent < 0.5) {
+            // Low inventory 20-50% (yellow)
+            station.status = 'low-stock';
+        } else {
+            // Healthy inventory > 50% (green)
+            station.status = 'operational';
+        }
+    }
+
+    private updateStationStatuses(): void {
+        for (const station of this.state.stations) {
+            this.updateStationStatus(station);
+        }
+    }
+
     private updateStations(): void {
         for (const station of this.state.stations) {
-            if (station.status !== 'operational') continue;
+            if (station.status === 'emergency' || station.status === 'offline') continue;
 
             // Battery charging simulation
             const chargeProb = Math.min(
@@ -453,14 +484,8 @@ export class SimulationEngine {
                 Math.max(1, station.activeChargers);
             station.peakQueueLength = Math.max(station.peakQueueLength, station.queueLength);
 
-            // Update status based on conditions
-            if (station.currentInventory < station.inventoryCap * 0.2) {
-                station.status = 'low-stock';
-            } else if (station.queueLength > station.activeChargers * 2) {
-                station.status = 'overloaded';
-            } else {
-                station.status = 'operational';
-            }
+            // Update status
+            this.updateStationStatus(station);
         }
     }
 
@@ -541,6 +566,33 @@ export class SimulationEngine {
                 this.state.kpis.lostSwaps++;
             }
         }
+    }
+
+    public toggleStationFailure(stationId: string): void {
+        const station = this.state.stations.find(s => s.id === stationId);
+        if (!station) return;
+
+        if (station.status === 'emergency') {
+            // Remove emergency status - recalculate proper status based on inventory
+            const inventoryPercent = station.currentInventory / station.inventoryCap;
+            if (station.queueLength > station.activeChargers * 2) {
+                station.status = 'overloaded';
+            } else if (inventoryPercent < 0.2) {
+                station.status = 'overloaded';
+            } else if (inventoryPercent < 0.5) {
+                station.status = 'low-stock';
+            } else {
+                station.status = 'operational';
+            }
+        } else {
+            // Set to emergency status
+            station.status = 'emergency';
+            // Reroute drivers heading to this station
+            this.rerouteDrivers(stationId);
+        }
+
+        this.recalculateKPIs();
+        this.notifyChange();
     }
 
     private notifyChange(): void {

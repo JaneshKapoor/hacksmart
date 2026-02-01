@@ -1,4 +1,4 @@
-.PHONY: up down restart status logs help
+.PHONY: up down restart status logs migrate reset-db help
 
 LOG_FILE=app.log
 PID_FILE=app.pid
@@ -47,6 +47,16 @@ logs:
 	@echo "M: Tailing $(LOG_FILE)... (Ctrl+C to exit)"
 	@tail -f $(LOG_FILE)
 
+migrate:
+	@echo "🔄 Running Supabase migrations..."
+	@npx supabase db reset
+	@echo "✅ Migrations applied."
+
+reset-db:
+	@echo "⚠️  Resetting database (THIS WILL DELETE ALL DATA)..."
+	@npx supabase db reset
+	@echo "✅ Database reset complete."
+
 clean:
 	@echo "🧹 Cleaning up..."
 	@rm -rf .next
@@ -56,8 +66,10 @@ clean:
 
 help:
 	@echo "ElectriGo Makefile Commands:"
-	@echo "  make up      - Start Supabase and Frontend (detached)"
-	@echo "  make down    - Stop Supabase and Frontend"
-	@echo "  make restart - Restart everything"
-	@echo "  make status  - Show status"
-	@echo "  make logs    - Tail logs"
+	@echo "  make up       - Start Supabase and Frontend (detached)"
+	@echo "  make down     - Stop Supabase and Frontend"
+	@echo "  make restart  - Restart everything"
+	@echo "  make status   - Show status"
+	@echo "  make logs     - Tail logs"
+	@echo "  make migrate  - Run database migrations"
+	@echo "  make reset-db - Reset database (⚠️ DELETES ALL DATA)"

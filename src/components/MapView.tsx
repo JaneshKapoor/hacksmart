@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Station, Driver, StationStatus } from '@/simulation/types';
@@ -11,10 +11,12 @@ interface MapViewProps {
     stations: Station[];
     drivers: Driver[];
     onStationClick?: (station: Station) => void;
+    onMapClick?: () => void;
+    selectedStationId?: string | null;
 }
 
 // Custom marker icons based on status
-const createStationIcon = (status: StationStatus) => {
+const createStationIcon = (status: StationStatus, isSelected: boolean = false) => {
     const colors: Record<StationStatus, string> = {
         operational: '#10b981',
         'low-stock': '#f59e0b',
@@ -24,6 +26,8 @@ const createStationIcon = (status: StationStatus) => {
     };
 
     const color = colors[status] || colors.operational;
+    const borderColor = isSelected ? '#3b82f6' : 'white';
+    const borderWidth = isSelected ? '4px' : '3px';
 
     return L.divIcon({
         className: 'custom-marker',
@@ -32,7 +36,7 @@ const createStationIcon = (status: StationStatus) => {
                 width: 28px;
                 height: 28px;
                 background: ${color};
-                border: 3px solid white;
+                border: ${borderWidth} solid ${borderColor};
                 border-radius: 50%;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.4);
                 display: flex;
@@ -81,7 +85,17 @@ function FitBounds() {
     return null;
 }
 
-export function MapView({ stations, drivers, onStationClick }: MapViewProps) {
+// Component to handle map clicks for deselection
+function MapClickHandler({ onMapClick }: { onMapClick: () => void }) {
+    useMapEvents({
+        click: () => {
+            onMapClick();
+        },
+    });
+    return null;
+}
+
+export function MapView({ stations, drivers, onStationClick, onMapClick, selectedStationId }: MapViewProps) {
     const center: [number, number] = [28.6139, 77.2090]; // Delhi center
 
     return (
@@ -100,13 +114,14 @@ export function MapView({ stations, drivers, onStationClick }: MapViewProps) {
 
                 <ZoomControl position="bottomright" />
                 <FitBounds />
+                {onMapClick && <MapClickHandler onMapClick={onMapClick} />}
 
                 {/* Station markers */}
                 {stations.map((station) => (
                     <Marker
                         key={station.id}
                         position={[station.geoPosition.lat, station.geoPosition.lng]}
-                        icon={createStationIcon(station.status)}
+                        icon={createStationIcon(station.status, station.id === selectedStationId)}
                         eventHandlers={{
                             click: () => onStationClick?.(station),
                         }}
