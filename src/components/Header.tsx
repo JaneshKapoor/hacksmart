@@ -49,7 +49,7 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                 position: 'relative',
             }}
         >
-            {/* Left: Logo & Navigation */}
+            {/* Left: Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flex: 1, maxWidth: '40%' }}>
                 {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
@@ -68,12 +68,6 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                     </div>
                     <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>ElectriGo</span>
                 </div>
-
-                {/* Navigation */}
-                <button className="btn btn-ghost" style={{ gap: 'var(--space-xs)' }}>
-                    <Home size={16} />
-                    <span>Home</span>
-                </button>
             </div>
 
             {/* Center: Time & Status - Absolutely Centered */}

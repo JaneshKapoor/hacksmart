@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     LayoutGrid,
     Home,
@@ -16,14 +17,25 @@ interface SidebarProps {
 }
 
 const navItems = [
-    { id: 'dashboard', icon: LayoutGrid, label: 'Dashboard' },
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'home', icon: Home, label: 'Home', path: '/' },
+    { id: 'dashboard', icon: LayoutGrid, label: 'Dashboard', path: '/' },
+    { id: 'analytics', icon: BarChart3, label: 'Analytics', path: '/' },
+    { id: 'settings', icon: Settings, label: 'Settings', path: '/' },
 ];
 
 export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const router = useRouter();
+
+    const handleNavClick = (item: typeof navItems[0]) => {
+        // If it's the home button, navigate to home page
+        if (item.id === 'home') {
+            router.push('/');
+        } else {
+            // For other tabs, use the onTabChange callback for now
+            onTabChange?.(item.id);
+        }
+    };
 
     return (
         <aside
@@ -48,7 +60,7 @@ export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) 
                     return (
                         <button
                             key={item.id}
-                            onClick={() => onTabChange?.(item.id)}
+                            onClick={() => handleNavClick(item)}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',

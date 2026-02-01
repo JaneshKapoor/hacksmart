@@ -105,7 +105,9 @@ export class SimulationEngine {
 
         // Populate initial drivers if we don't have any yet
         if (this.state.drivers.length === 0) {
-            this.populateInitialDrivers(25);
+            // Randomize initial driver count between 15-40 drivers
+            const initialDriverCount = Math.floor(15 + Math.random() * 26);
+            this.populateInitialDrivers(initialDriverCount);
         }
 
         this.recalculateKPIs();
@@ -270,8 +272,11 @@ export class SimulationEngine {
         const weatherMultiplier = this.state.weather?.multiplier || 1.0;
         const stationCount = this.state.stations.filter(s => s.status === 'operational').length;
 
-        // Lambda for Poisson distribution
-        const lambda = baseDemand * weatherMultiplier * 0.2 * (stationCount / 8);
+        // Add random variation to base demand (±30%)
+        const demandVariation = 0.7 + Math.random() * 0.6; // 0.7 to 1.3
+
+        // Lambda for Poisson distribution with increased variability
+        const lambda = baseDemand * weatherMultiplier * demandVariation * 0.3 * (stationCount / 8);
         const newDriverCount = poissonRandom(lambda);
 
         for (let i = 0; i < newDriverCount; i++) {
