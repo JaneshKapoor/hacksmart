@@ -68,6 +68,7 @@ export interface Driver {
     owedAmount: number;
     swapsToday: number;
     rerouteAttempts?: number; // Track number of reroute attempts
+    stateChangeTime?: number; // Tick when state last changed (for cleanup)
 }
 
 export type FailureReason =
@@ -189,6 +190,18 @@ export interface Scenario {
     params: Record<string, number | string | boolean>;
 }
 
+export type NotificationType = 'battery_warning' | 'reroute_failure' | 'station_failure' | 'info';
+
+export interface SimulationNotification {
+    id: string;
+    type: NotificationType;
+    message: string;
+    timestamp: Date;
+    driverCount?: number;
+    stationId?: string;
+    stationName?: string;
+}
+
 export interface SimulationState {
     isRunning: boolean;
     isPaused: boolean;
@@ -206,6 +219,7 @@ export interface SimulationState {
         kpis: KPIs;
     }[];
     failedRides: FailedRide[];
+    notifications: SimulationNotification[];
 }
 
 export const INITIAL_KPIS: KPIs = {

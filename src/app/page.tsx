@@ -10,6 +10,7 @@ import { Scenarios } from '@/components/Scenarios';
 import { NetworkHealth } from '@/components/NetworkHealth';
 import { CombinedStats } from '@/components/CombinedStats';
 import { StationPerformance } from '@/components/StationPerformance';
+import { NotificationBanner } from '@/components/NotificationBanner';
 import { INITIAL_KPIS } from '@/simulation/types';
 import { Loader2 } from 'lucide-react';
 
@@ -42,6 +43,7 @@ export default function Dashboard() {
     const drivers = state?.drivers || [];
     const history = state?.history || [];
     const activeScenario = state?.activeScenario || { type: 'baseline' as const, active: true, params: {} };
+    const notifications = state?.notifications || [];
 
     return (
         <div
@@ -65,6 +67,9 @@ export default function Dashboard() {
                     onReset={reset}
                     onSpeedChange={setSpeed}
                 />
+
+                {/* Notification Banner */}
+                <NotificationBanner notifications={notifications} />
 
                 {/* Content Area */}
                 <div

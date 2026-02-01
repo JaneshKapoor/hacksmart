@@ -12,6 +12,8 @@ import {
     FailedRide,
     FailureReason,
     NearbyStationSnapshot,
+    SimulationNotification,
+    NotificationType,
 } from './types';
 import { geoToPercent, percentToGeo, haversine } from '@/lib/geoUtils';
 
@@ -83,6 +85,19 @@ function calculateBatteryUrgency(batteryLevel: number): number {
     return 1.0;
 }
 
+function estimateBatteryNeeded(distance: number): number {
+    // Battery consumption rate: ~1% per 1.5 units of distance
+    // Add 20% safety buffer for battery estimation
+    const baseBatteryNeeded = distance / 1.5;
+    return baseBatteryNeeded * 1.2; // 20% safety margin
+}
+
+function canReachStation(driver: Driver, station: Station): boolean {
+    const distance = euclideanDistance(driver.position, station.position);
+    const batteryNeeded = estimateBatteryNeeded(distance);
+    return driver.batteryLevel >= batteryNeeded;
+}
+
 // ============================================================================
 // Simulation Engine Class
 // ============================================================================
@@ -91,6 +106,7 @@ export class SimulationEngine {
     private state: SimulationState;
     private tickInterval: NodeJS.Timeout | null = null;
     private onStateChange: (state: SimulationState) => void;
+    private currentTick: number = 0;
 
     constructor(onStateChange: (state: SimulationState) => void) {
         this.onStateChange = onStateChange;
@@ -112,6 +128,7 @@ export class SimulationEngine {
             activeScenario: { type: 'demand', active: true, params: {} },
             history: [],
             failedRides: [],
+            notifications: [],
         };
     }
 
@@ -149,12 +166,12 @@ export class SimulationEngine {
                 const outlierType = Math.random();
 
                 if (outlierType < 0.4) {
-                    // Critical battery outlier (3-12%)
-                    batteryLevel = 3 + Math.random() * 9;
+                    // Critical battery outlier (5-12%)
+                    batteryLevel = 5 + Math.random() * 7;
                     pos = randomPosition();
                 } else if (outlierType < 0.7) {
-                    // Very low battery outlier (8-18%)
-                    batteryLevel = 8 + Math.random() * 10;
+                    // Very low battery outlier (10-18%)
+                    batteryLevel = 10 + Math.random() * 8;
                     pos = randomPosition();
                 } else {
                     // Remote location outlier (far from stations)
@@ -197,6 +214,7 @@ export class SimulationEngine {
                 // For outliers that can't find stations, still add them as abandoned
                 // so they get recorded in Last Mile
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 const reason = this.determineFailureReason(driver);
                 this.recordFailedRide(driver, reason, false);
                 this.state.drivers.push(driver);
@@ -278,6 +296,7 @@ export class SimulationEngine {
         const carbon = this.state.carbon;
 
         this.state = this.createInitialState();
+        this.currentTick = 0;
         this.state.stations = stations;
         this.state.weather = weather;
         this.state.carbon = carbon;
@@ -308,6 +327,9 @@ export class SimulationEngine {
     }
 
     private tick(): void {
+        // Increment tick counter
+        this.currentTick++;
+
         // Advance time by 1 minute
         this.state.currentTime = new Date(this.state.currentTime.getTime() + 60000);
 
@@ -355,7 +377,9 @@ export class SimulationEngine {
         const demandVariation = 0.7 + Math.random() * 0.6; // 0.7 to 1.3
 
         // Lambda for Poisson distribution with increased variability
-        const lambda = baseDemand * weatherMultiplier * demandVariation * 0.3 * (stationCount / 8);
+        // Ensure minimum lambda of 0.5 to keep drivers coming even with few stations
+        const stationMultiplier = Math.max(0.3, stationCount / 8);
+        const lambda = Math.max(0.5, baseDemand * weatherMultiplier * demandVariation * 0.3 * stationMultiplier);
         const newDriverCount = poissonRandom(lambda);
 
         for (let i = 0; i < newDriverCount; i++) {
@@ -373,12 +397,12 @@ export class SimulationEngine {
                 const outlierType = Math.random();
 
                 if (outlierType < 0.35) {
-                    // Critical battery outlier (3-12%)
-                    batteryLevel = 3 + Math.random() * 9;
+                    // Critical battery outlier (5-12%)
+                    batteryLevel = 5 + Math.random() * 7;
                     pos = randomPosition();
                 } else if (outlierType < 0.65) {
-                    // Very low battery outlier (10-20%)
-                    batteryLevel = 10 + Math.random() * 10;
+                    // Very low battery outlier (10-18%)
+                    batteryLevel = 10 + Math.random() * 8;
                     pos = randomPosition();
                 } else if (outlierType < 0.85) {
                     // Remote location outlier
@@ -426,6 +450,7 @@ export class SimulationEngine {
                 driver.state = 'traveling';
             } else {
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 const reason = this.determineFailureReason(driver);
                 this.recordFailedRide(driver, reason, false);
             }
@@ -433,13 +458,19 @@ export class SimulationEngine {
             this.state.drivers.push(driver);
         }
 
-        // Remove abandoned and completed drivers older than 10 ticks
-        this.state.drivers = this.state.drivers.filter(d =>
-            d.state !== 'abandoned' && d.state !== 'completed'
-        );
+        // Remove abandoned and completed drivers older than 10 ticks (10 minutes)
+        this.state.drivers = this.state.drivers.filter(d => {
+            // Keep all active drivers (traveling, queued, swapping, idle)
+            if (d.state !== 'abandoned' && d.state !== 'completed') {
+                return true;
+            }
+            // For completed/abandoned drivers, only remove if they've been in that state for 10+ ticks
+            const ticksSinceStateChange = this.currentTick - (d.stateChangeTime || 0);
+            return ticksSinceStateChange < 10;
+        });
     }
 
-    private selectStation(driver: Driver): Station | null {
+    private selectStation(driver: Driver, checkBatteryFeasibility: boolean = true): Station | null {
         const operational = this.state.stations.filter(
             s => s.status === 'operational' && s.currentInventory > 0
         );
@@ -449,12 +480,23 @@ export class SimulationEngine {
             return null;
         }
 
+        // Filter out stations that are unreachable due to battery constraints
+        let reachable = operational;
+        if (checkBatteryFeasibility) {
+            reachable = operational.filter(s => canReachStation(driver, s));
+
+            // If no stations are reachable, return null
+            if (reachable.length === 0) {
+                return null;
+            }
+        }
+
         // Calculate battery urgency factor
         const batteryUrgencyFactor = calculateBatteryUrgency(driver.batteryLevel);
         const waitTimeWeight = WAIT_TIME_WEIGHT_BASE / batteryUrgencyFactor;
 
         // Score stations by distance (with battery urgency) + wait time
-        const scored = operational.map(s => ({
+        const scored = reachable.map(s => ({
             station: s,
             score: (euclideanDistance(driver.position, s.position) * batteryUrgencyFactor) +
                    (s.avgWaitTime * waitTimeWeight),
@@ -556,6 +598,7 @@ export class SimulationEngine {
                     driver.waitTime++;
                     if (driver.waitTime >= AVG_SWAP_DURATION) {
                         driver.state = 'completed';
+                        driver.stateChangeTime = this.currentTick;
                         // Update station
                         const station = this.state.stations.find(s => s.id === driver.targetStationId);
                         if (station) {
@@ -611,11 +654,15 @@ export class SimulationEngine {
             // Outlier drivers (already low battery) drain faster
             const baseDrain = 0.5 + Math.random();
             const drainMultiplier = driver.batteryLevel < 15 ? 1.5 : 1.0;
-            driver.batteryLevel = Math.max(0, driver.batteryLevel - (baseDrain * drainMultiplier));
+            const newBatteryLevel = driver.batteryLevel - (baseDrain * drainMultiplier);
 
-            // Check if battery critically low mid-journey
+            // Don't let battery go below 1% - driver abandons before complete depletion
+            driver.batteryLevel = Math.max(1, newBatteryLevel);
+
+            // Check if battery critically low mid-journey (≤2%)
             if (driver.batteryLevel <= 2) {
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 this.recordFailedRide(driver, 'stranded', false);
                 this.state.kpis.lostSwaps++;
                 return;
@@ -624,6 +671,7 @@ export class SimulationEngine {
             // Occasionally check if driver should abandon due to low battery + long distance
             if (driver.batteryLevel < 10 && distance > 30 && Math.random() < 0.1) {
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 this.recordFailedRide(driver, 'low_battery', false);
                 this.state.kpis.lostSwaps++;
                 return;
@@ -708,6 +756,31 @@ export class SimulationEngine {
         }
     }
 
+    private addNotification(
+        type: NotificationType,
+        message: string,
+        options?: {
+            driverCount?: number;
+            stationId?: string;
+            stationName?: string;
+        }
+    ): void {
+        const notification: SimulationNotification = {
+            id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type,
+            message,
+            timestamp: new Date(this.state.currentTime),
+            ...options,
+        };
+
+        this.state.notifications.push(notification);
+
+        // Keep only last 50 notifications
+        if (this.state.notifications.length > 50) {
+            this.state.notifications = this.state.notifications.slice(-50);
+        }
+    }
+
     private recalculateKPIs(): void {
         const operational = this.state.stations.filter(s => s.status !== 'offline');
 
@@ -737,7 +810,7 @@ export class SimulationEngine {
             totalInventory,
             totalCapacity,
             peakWaitTime: peakWait,
-            reroutedDrivers: 0,
+            reroutedDrivers: this.state.kpis.reroutedDrivers || 0,
         };
     }
 
@@ -780,6 +853,7 @@ export class SimulationEngine {
         );
 
         const failedStation = this.state.stations.find(s => s.id === failedStationId);
+        let batteryInsufficientCount = 0;
 
         // Reroute traveling drivers
         for (const driver of travelingDrivers) {
@@ -789,19 +863,54 @@ export class SimulationEngine {
             // Check if exceeded max reroute attempts (3)
             if (driver.rerouteAttempts > 3) {
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 this.state.kpis.lostSwaps++;
                 this.recordFailedRide(driver, 'multiple_reroutes', true);
                 continue;
             }
 
-            const newTarget = this.selectStation(driver);
+            // Try to find a new station with battery feasibility check
+            const newTarget = this.selectStation(driver, true);
+
             if (newTarget) {
-                driver.targetStationId = newTarget.id;
-                this.state.kpis.reroutedDrivers++;
+                // Verify driver can reach the new station
+                const distance = euclideanDistance(driver.position, newTarget.position);
+                const batteryNeeded = estimateBatteryNeeded(distance);
+
+                if (driver.batteryLevel >= batteryNeeded) {
+                    driver.targetStationId = newTarget.id;
+                    this.state.kpis.reroutedDrivers++;
+                } else {
+                    // Insufficient battery to reach new station
+                    driver.state = 'abandoned';
+                    driver.stateChangeTime = this.currentTick;
+                    this.state.kpis.lostSwaps++;
+                    batteryInsufficientCount++;
+                    this.recordFailedRide(driver, 'station_too_far', true);
+                    console.warn(
+                        `[REROUTE FAILED] Driver ${driver.name} (Battery: ${driver.batteryLevel.toFixed(1)}%) ` +
+                        `cannot reach station ${newTarget.name} - needs ${batteryNeeded.toFixed(1)}% battery for ${distance.toFixed(1)} units`
+                    );
+                }
             } else {
+                // No reachable station found
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 this.state.kpis.lostSwaps++;
-                this.recordFailedRide(driver, 'rerouting_failed', true);
+
+                // Determine if it's battery or availability issue
+                const anyOperational = this.state.stations.some(s => s.status === 'operational' && s.currentInventory > 0);
+                const reason = anyOperational ? 'station_too_far' : 'rerouting_failed';
+
+                if (anyOperational) {
+                    batteryInsufficientCount++;
+                    console.warn(
+                        `[REROUTE FAILED] Driver ${driver.name} (Battery: ${driver.batteryLevel.toFixed(1)}%) ` +
+                        `has insufficient battery to reach any available station`
+                    );
+                }
+
+                this.recordFailedRide(driver, reason, true);
             }
         }
 
@@ -813,6 +922,7 @@ export class SimulationEngine {
             // Check if exceeded max reroute attempts (3)
             if (driver.rerouteAttempts > 3) {
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 this.state.kpis.lostSwaps++;
                 this.recordFailedRide(driver, 'multiple_reroutes', true);
                 // Still decrement queue
@@ -832,15 +942,63 @@ export class SimulationEngine {
             driver.waitTime = 0;
 
             // Find new target station (will use battery-aware logic)
-            const newTarget = this.selectStation(driver);
+            const newTarget = this.selectStation(driver, true);
+
             if (newTarget) {
-                driver.targetStationId = newTarget.id;
-                this.state.kpis.reroutedDrivers++;
+                // Verify driver can reach the new station
+                const distance = euclideanDistance(driver.position, newTarget.position);
+                const batteryNeeded = estimateBatteryNeeded(distance);
+
+                if (driver.batteryLevel >= batteryNeeded) {
+                    driver.targetStationId = newTarget.id;
+                    this.state.kpis.reroutedDrivers++;
+                } else {
+                    // Insufficient battery to reach new station
+                    driver.state = 'abandoned';
+                    driver.stateChangeTime = this.currentTick;
+                    this.state.kpis.lostSwaps++;
+                    batteryInsufficientCount++;
+                    this.recordFailedRide(driver, 'station_too_far', true);
+                    console.warn(
+                        `[REROUTE FAILED] Driver ${driver.name} (Battery: ${driver.batteryLevel.toFixed(1)}%) ` +
+                        `cannot reach station ${newTarget.name} - needs ${batteryNeeded.toFixed(1)}% battery for ${distance.toFixed(1)} units`
+                    );
+                }
             } else {
+                // No reachable station found
                 driver.state = 'abandoned';
+                driver.stateChangeTime = this.currentTick;
                 this.state.kpis.lostSwaps++;
-                this.recordFailedRide(driver, 'rerouting_failed', true);
+
+                // Determine if it's battery or availability issue
+                const anyOperational = this.state.stations.some(s => s.status === 'operational' && s.currentInventory > 0);
+                const reason = anyOperational ? 'station_too_far' : 'rerouting_failed';
+
+                if (anyOperational) {
+                    batteryInsufficientCount++;
+                    console.warn(
+                        `[REROUTE FAILED] Driver ${driver.name} (Battery: ${driver.batteryLevel.toFixed(1)}%) ` +
+                        `has insufficient battery to reach any available station`
+                    );
+                }
+
+                this.recordFailedRide(driver, reason, true);
             }
+        }
+
+        // Alert user if drivers were stranded due to insufficient battery
+        if (batteryInsufficientCount > 0) {
+            const warningMessage =
+                `Station "${failedStation?.name}" failure caused ${batteryInsufficientCount} ` +
+                `driver(s) to be stranded due to insufficient battery for rerouting`;
+
+            console.error(`[BATTERY WARNING] ${warningMessage}`);
+
+            this.addNotification('battery_warning', warningMessage, {
+                driverCount: batteryInsufficientCount,
+                stationId: failedStationId,
+                stationName: failedStation?.name,
+            });
         }
     }
 
@@ -953,9 +1111,26 @@ export class SimulationEngine {
             } else {
                 station.status = 'operational';
             }
+
+            this.addNotification('station_failure', `Station "${station.name}" restored to operational status`, {
+                stationId: station.id,
+                stationName: station.name,
+            });
         } else {
+            // Count drivers that will be affected
+            const affectedDrivers = this.state.drivers.filter(
+                d => d.targetStationId === stationId && (d.state === 'traveling' || d.state === 'queued')
+            );
+
             // Set to emergency status
             station.status = 'emergency';
+
+            this.addNotification('station_failure', `Station "${station.name}" marked as failed. Rerouting ${affectedDrivers.length} driver(s)...`, {
+                driverCount: affectedDrivers.length,
+                stationId: station.id,
+                stationName: station.name,
+            });
+
             // Reroute drivers heading to this station
             this.rerouteDrivers(stationId);
         }

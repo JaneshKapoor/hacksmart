@@ -130,6 +130,33 @@ function FailedRideRow({ ride }: { ride: FailedRide }) {
             </td>
 
             <td style={{ padding: 'var(--space-sm) var(--space-md)' }}>
+                {ride.targetStationDistance != null ? (() => {
+                    const batteryNeeded = (ride.targetStationDistance! / 1.5) * 1.2;
+                    const deficit = batteryNeeded - ride.batteryLevel;
+                    return (
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--font-sm)' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>
+                                    {ride.batteryLevel.toFixed(0)}%
+                                </span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>/</span>
+                                <span style={{ color: deficit > 0 ? 'var(--status-emergency)' : 'var(--status-success, #22c55e)', fontWeight: 500 }}>
+                                    {batteryNeeded.toFixed(0)}%
+                                </span>
+                            </div>
+                            {deficit > 0 && (
+                                <div style={{ fontSize: 'var(--font-xs)', color: 'var(--status-emergency)', marginTop: '2px' }}>
+                                    -{deficit.toFixed(0)}% short
+                                </div>
+                            )}
+                        </div>
+                    );
+                })() : (
+                    <span style={{ fontSize: 'var(--font-sm)', color: 'var(--text-muted)' }}>N/A</span>
+                )}
+            </td>
+
+            <td style={{ padding: 'var(--space-sm) var(--space-md)' }}>
                 <span style={{ fontSize: 'var(--font-sm)', color: ride.wasRerouted ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
                     {ride.wasRerouted ? 'Yes' : 'No'}
                 </span>
@@ -348,6 +375,9 @@ export default function LastMilePage() {
                                         </th>
                                         <th style={{ padding: '8px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                                             Operational Stations
+                                        </th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                            Have / Need
                                         </th>
                                         <th style={{ padding: '8px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                                             Rerouted
