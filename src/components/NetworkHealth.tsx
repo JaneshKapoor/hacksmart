@@ -24,7 +24,8 @@ export function NetworkHealth({ kpis }: NetworkHealthProps) {
     // Sub-metrics
     const statusPercent = Math.round(operationalRatio * 100);
     const autoPercent = Math.round(utilizationHealth * 100);
-    const chargeCount = Math.round(kpis.totalInventory * 0.1);
+    const chargeCount = Math.round(kpis.totalInventory);
+    const chargeTotal = Math.round(kpis.totalCapacity);
 
     return (
         <div className="card" style={{ padding: 'var(--space-md)' }}>
@@ -127,9 +128,9 @@ export function NetworkHealth({ kpis }: NetworkHealthProps) {
                                     background: 'var(--text-muted)',
                                 }}
                             />
-                            <span style={{ fontSize: '1rem', fontWeight: 600 }}>{chargeCount}</span>
+                            <span style={{ fontSize: '1rem', fontWeight: 600 }}>{chargeCount}/{chargeTotal}</span>
                         </div>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Charge</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Swaps Available</span>
                     </div>
                 </div>
             </div>

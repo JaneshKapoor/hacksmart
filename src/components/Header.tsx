@@ -46,10 +46,11 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0 var(--space-lg)',
+                position: 'relative',
             }}
         >
             {/* Left: Logo & Navigation */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xl)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flex: 1, maxWidth: '40%' }}>
                 {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
                     <div
@@ -73,6 +74,45 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                     <Home size={16} />
                     <span>Home</span>
                 </button>
+            </div>
+
+            {/* Center: Time & Status - Absolutely Centered */}
+            <div
+                style={{
+                    position: 'absolute',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-md)',
+                    padding: 'var(--space-xs) var(--space-md)',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-md)',
+                    zIndex: 10,
+                }}
+            >
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                    {state?.isPaused ? 'Paused' : 'Running'}
+                </span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+                    {formatTime(currentTime)}
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                    Day {day}
+                </span>
+            </div>
+
+            {/* Right side container */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flex: 1, maxWidth: '40%', justifyContent: 'flex-end' }}>
+                {/* Reset Button */}
+                <button
+                    className="btn btn-ghost"
+                    onClick={onReset}
+                    style={{ padding: 'var(--space-xs) var(--space-sm)' }}
+                    title="Reset Simulation"
+                >
+                    <RotateCcw size={16} />
+                </button>
 
                 {/* Run Simulation Button */}
                 <button
@@ -84,43 +124,6 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                     <span>{isRunning ? 'Pause' : 'Run Simulation'}</span>
                 </button>
 
-                {/* Reset Button */}
-                <button
-                    className="btn btn-ghost"
-                    onClick={onReset}
-                    style={{ padding: 'var(--space-xs) var(--space-sm)' }}
-                    title="Reset Simulation"
-                >
-                    <RotateCcw size={16} />
-                </button>
-            </div>
-
-            {/* Center: Time & Status */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 'var(--space-md)',
-                        padding: 'var(--space-xs) var(--space-md)',
-                        background: 'var(--bg-tertiary)',
-                        borderRadius: 'var(--radius-md)',
-                    }}
-                >
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                        {state?.isPaused ? 'Paused' : 'Running'}
-                    </span>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 600 }}>
-                        {formatTime(currentTime)}
-                    </span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                        Day {day}
-                    </span>
-                </div>
-            </div>
-
-            {/* Right: Weather, Carbon, Stats */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
                 {/* Weather */}
                 {weather && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
@@ -157,26 +160,6 @@ export function Header({ state, onToggleSimulation, onReset, onSpeedChange }: He
                         <span style={{ fontSize: '0.8rem' }}>{state?.kpis.totalStations || 0} stations</span>
                     </div>
                 </div>
-
-                {/* User Avatar */}
-                <button
-                    style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: 'var(--brand-secondary)',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                    }}
-                >
-                    U
-                </button>
             </div>
         </header>
     );

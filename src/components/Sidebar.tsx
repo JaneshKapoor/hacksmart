@@ -6,12 +6,9 @@ import {
     Home,
     BarChart3,
     Settings,
-    HelpCircle,
     LogOut,
-    ChevronLeft,
-    ChevronRight,
-    Zap,
 } from 'lucide-react';
+import { logout } from '@/app/login/actions';
 
 interface SidebarProps {
     activeTab?: string;
@@ -23,11 +20,6 @@ const navItems = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics' },
     { id: 'settings', icon: Settings, label: 'Settings' },
-];
-
-const bottomItems = [
-    { id: 'help', icon: HelpCircle, label: 'Help' },
-    { id: 'logout', icon: LogOut, label: 'Logout' },
 ];
 
 export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) {
@@ -48,31 +40,6 @@ export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) 
                 transition: 'width var(--transition-normal)',
             }}
         >
-            {/* Logo */}
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 'var(--space-md)',
-                    marginBottom: 'var(--space-lg)',
-                }}
-            >
-                <div
-                    style={{
-                        width: '36px',
-                        height: '36px',
-                        background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
-                        borderRadius: 'var(--radius-md)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <Zap size={20} color="white" />
-                </div>
-            </div>
-
             {/* Main Navigation */}
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
                 {navItems.map((item) => {
@@ -104,34 +71,28 @@ export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) 
                 })}
             </nav>
 
-            {/* Bottom Navigation */}
+            {/* Logout Button */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-                {bottomItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => onTabChange?.(item.id)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '44px',
-                                height: '44px',
-                                margin: '0 auto',
-                                background: 'transparent',
-                                border: 'none',
-                                borderRadius: 'var(--radius-md)',
-                                color: 'var(--text-muted)',
-                                cursor: 'pointer',
-                                transition: 'all var(--transition-fast)',
-                            }}
-                            title={item.label}
-                        >
-                            <Icon size={20} />
-                        </button>
-                    );
-                })}
+                <button
+                    onClick={() => logout()}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '44px',
+                        height: '44px',
+                        margin: '0 auto',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all var(--transition-fast)',
+                    }}
+                    title="Logout"
+                >
+                    <LogOut size={20} />
+                </button>
             </div>
         </aside>
     );

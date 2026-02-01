@@ -16,6 +16,12 @@ export type StationStatus = 'operational' | 'low-stock' | 'overloaded' | 'emerge
 export type ChargerType = 'standard' | 'fast' | 'mixed';
 export type DriverState = 'idle' | 'traveling' | 'queued' | 'swapping' | 'completed' | 'abandoned';
 
+export interface ConnectionDetail {
+    type: string;
+    powerKW: number;
+    quantity: number;
+}
+
 export interface Station {
     id: string;
     name: string;
@@ -38,6 +44,15 @@ export interface Station {
     status: StationStatus;
     operatingHours: { start: number; end: number };
     coverageRadius: number;
+
+    // Additional real-world data from OCM API
+    address?: string;
+    operator?: string;
+    usageCost?: string;
+    connectionDetails?: ConnectionDetail[];
+    maxPowerKW?: number;
+    minPowerKW?: number;
+    isRealStation?: boolean;
 }
 
 export interface Driver {

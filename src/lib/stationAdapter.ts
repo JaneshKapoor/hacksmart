@@ -1,4 +1,4 @@
-import { Station, GeoPosition } from '@/simulation/types';
+import { Station, GeoPosition, ConnectionDetail } from '@/simulation/types';
 import { geoToPercent } from '@/lib/geoUtils';
 
 interface OCMStation {
@@ -46,6 +46,38 @@ function getChargerCount(ocm: OCMStation): number {
     return Math.floor(Math.random() * 6) + 4; // 4-10 default
 }
 
+function extractConnectionDetails(connections?: OCMStation['Connections']): {
+    details: ConnectionDetail[];
+    maxPowerKW: number;
+    minPowerKW: number;
+} {
+    if (!connections || connections.length === 0) {
+        return {
+            details: [],
+            maxPowerKW: 22, // Default standard charger
+            minPowerKW: 22,
+        };
+    }
+
+    const details: ConnectionDetail[] = connections
+        .filter((c) => c.PowerKW && c.PowerKW > 0)
+        .map((c) => ({
+            type: c.ConnectionType?.Title || 'Unknown',
+            powerKW: c.PowerKW || 22,
+            quantity: c.Quantity || 1,
+        }));
+
+    const powerValues = connections
+        .map((c) => c.PowerKW || 0)
+        .filter((p) => p > 0);
+
+    return {
+        details,
+        maxPowerKW: powerValues.length > 0 ? Math.max(...powerValues) : 22,
+        minPowerKW: powerValues.length > 0 ? Math.min(...powerValues) : 22,
+    };
+}
+
 function generateSimulationValues(chargers: number) {
     const inventoryCap = chargers * 4 + Math.floor(Math.random() * 10);
     const currentInventory = Math.floor(inventoryCap * (0.5 + Math.random() * 0.4));
@@ -83,6 +115,18 @@ export function adaptOCMStations(ocmStations: OCMStation[]): Station[] {
                 .filter(Boolean)
                 .join(', ') || 'Delhi NCR';
 
+            // Extract connection details and power ratings
+            const { details, maxPowerKW, minPowerKW } = extractConnectionDetails(ocm.Connections);
+
+            // Build full address
+            const address = [
+                ocm.AddressInfo.AddressLine1,
+                ocm.AddressInfo.Town,
+                ocm.AddressInfo.StateOrProvince
+            ]
+                .filter(Boolean)
+                .join(', ');
+
             return {
                 id: `real-station-${ocm.ID}`,
                 name: name.length > 30 ? name.slice(0, 30) + '...' : name,
@@ -97,6 +141,15 @@ export function adaptOCMStations(ocmStations: OCMStation[]): Station[] {
                 operatingHours: { start: 0, end: 24 },
                 coverageRadius: chargers >= 10 ? 4 : chargers >= 6 ? 3 : 2,
                 geoPosition,
+
+                // Additional real-world data
+                address: address || undefined,
+                operator: ocm.OperatorInfo?.Title,
+                usageCost: ocm.UsageCost,
+                connectionDetails: details.length > 0 ? details : undefined,
+                maxPowerKW,
+                minPowerKW,
+                isRealStation: true,
             };
         });
 }
