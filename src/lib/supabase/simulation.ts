@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { Station, Driver, SimulationState as SimState } from '@/simulation/types';
+import { Station, Driver, SimulationState as SimState, FailedRide } from '@/simulation/types';
 
 // ============================================================================
 // Supabase Simulation Database Operations
@@ -341,5 +341,162 @@ export async function createStationSnapshot(stationId: string, station: Station)
     } catch (error) {
         // Silently fail - snapshots are optional
         console.debug('Failed to create station snapshot:', error);
+    }
+}
+
+// ============================================================================
+// Failed Rides Operations
+// ============================================================================
+
+export interface DBFailedRide {
+    id?: string;
+    driver_id: string;
+    driver_name: string;
+    failure_latitude: number;
+    failure_longitude: number;
+    origin_latitude: number;
+    origin_longitude: number;
+    battery_level: number;
+    travel_time: number;
+    wait_time: number;
+    target_station_id: string | null;
+    target_station_name: string | null;
+    target_station_distance: number | null;
+    failure_reason: string;
+    failure_timestamp: string;
+    simulation_day: number;
+    hour_of_day: number;
+    weather_condition: string | null;
+    weather_multiplier: number | null;
+    temperature: number | null;
+    operational_stations_count: number;
+    total_network_inventory: number;
+    network_utilization: number;
+    avg_network_wait_time: number;
+    nearby_stations: any;
+    was_rerouted: boolean;
+    reroute_attempts: number;
+    owed_amount: number;
+    swaps_today: number;
+    created_at?: string;
+}
+
+// Convert FailedRide to DB format
+export function failedRideToDB(ride: FailedRide): Omit<DBFailedRide, 'id' | 'created_at'> {
+    return {
+        driver_id: ride.driverId,
+        driver_name: ride.driverName,
+        failure_latitude: ride.failureGeoPosition.lat,
+        failure_longitude: ride.failureGeoPosition.lng,
+        origin_latitude: ride.originGeoPosition.lat,
+        origin_longitude: ride.originGeoPosition.lng,
+        battery_level: ride.batteryLevel,
+        travel_time: ride.travelTime,
+        wait_time: ride.waitTime,
+        target_station_id: ride.targetStationId,
+        target_station_name: ride.targetStationName,
+        target_station_distance: ride.targetStationDistance,
+        failure_reason: ride.failureReason,
+        failure_timestamp: ride.failureTimestamp.toISOString(),
+        simulation_day: ride.simulationDay,
+        hour_of_day: ride.hourOfDay,
+        weather_condition: ride.weatherCondition,
+        weather_multiplier: ride.weatherMultiplier,
+        temperature: ride.temperature,
+        operational_stations_count: ride.operationalStationsCount,
+        total_network_inventory: ride.totalNetworkInventory,
+        network_utilization: ride.networkUtilization,
+        avg_network_wait_time: ride.avgNetworkWaitTime,
+        nearby_stations: ride.nearbyStations,
+        was_rerouted: ride.wasRerouted,
+        reroute_attempts: ride.rerouteAttempts,
+        owed_amount: ride.owedAmount,
+        swaps_today: ride.swapsToday,
+    };
+}
+
+// Convert DB format to FailedRide
+export function dbToFailedRide(db: DBFailedRide): FailedRide {
+    return {
+        driverId: db.driver_id,
+        driverName: db.driver_name,
+        failurePosition: { x: 0, y: 0 }, // Position not stored in DB
+        failureGeoPosition: { lat: db.failure_latitude, lng: db.failure_longitude },
+        originPosition: { x: 0, y: 0 },
+        originGeoPosition: { lat: db.origin_latitude, lng: db.origin_longitude },
+        batteryLevel: db.battery_level,
+        travelTime: db.travel_time,
+        waitTime: db.wait_time,
+        targetStationId: db.target_station_id,
+        targetStationName: db.target_station_name,
+        targetStationDistance: db.target_station_distance,
+        failureReason: db.failure_reason as any,
+        failureTimestamp: new Date(db.failure_timestamp),
+        simulationDay: db.simulation_day,
+        hourOfDay: db.hour_of_day,
+        weatherCondition: db.weather_condition,
+        weatherMultiplier: db.weather_multiplier,
+        temperature: db.temperature,
+        operationalStationsCount: db.operational_stations_count,
+        totalNetworkInventory: db.total_network_inventory,
+        networkUtilization: db.network_utilization,
+        avgNetworkWaitTime: db.avg_network_wait_time,
+        nearbyStations: db.nearby_stations || [],
+        wasRerouted: db.was_rerouted,
+        rerouteAttempts: db.reroute_attempts,
+        owedAmount: db.owed_amount,
+        swapsToday: db.swaps_today,
+    };
+}
+
+export async function saveFailedRidesToDB(failedRides: FailedRide[]): Promise<void> {
+    if (failedRides.length === 0) return;
+
+    try {
+        const supabase = createClient();
+        const dbFailedRides = failedRides.map(failedRideToDB);
+
+        const { error } = await supabase
+            .from('failed_rides')
+            .insert(dbFailedRides);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Failed to save failed rides to DB:', error);
+    }
+}
+
+export async function loadFailedRidesFromDB(limit: number = 1000): Promise<FailedRide[]> {
+    try {
+        const supabase = createClient();
+
+        const { data, error } = await supabase
+            .from('failed_rides')
+            .select('*')
+            .order('failure_timestamp', { ascending: false })
+            .limit(limit);
+
+        if (error) throw error;
+        if (!data || data.length === 0) return [];
+
+        return data.map(dbToFailedRide);
+    } catch (error) {
+        console.error('Failed to load failed rides from DB:', error);
+        return [];
+    }
+}
+
+export async function saveFailedRideToDB(ride: FailedRide): Promise<void> {
+    try {
+        const supabase = createClient();
+        const dbRide = failedRideToDB(ride);
+
+        const { error } = await supabase
+            .from('failed_rides')
+            .insert(dbRide);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Failed to save failed ride to DB:', error);
     }
 }

@@ -67,6 +67,80 @@ export interface Driver {
     travelTime: number;
     owedAmount: number;
     swapsToday: number;
+    rerouteAttempts?: number; // Track number of reroute attempts
+}
+
+export type FailureReason =
+    | 'critical_battery'      // Battery ≤15% and no nearby station
+    | 'low_battery'           // Battery ≤25% and couldn't reach station
+    | 'station_too_far'       // Nearest station exceeds battery range
+    | 'no_stations_available' // No operational stations in network
+    | 'no_inventory'          // All stations out of batteries
+    | 'network_congestion'    // All stations have excessive queues (>10)
+    | 'excessive_queue'       // Target station queue too long for battery level
+    | 'rerouting_failed'      // Station failed and no alternative found
+    | 'multiple_reroutes'     // Exceeded maximum reroute attempts
+    | 'destination_failed'    // Target station failed mid-journey
+    | 'stranded';             // Driver stranded due to battery depletion mid-route
+
+export interface NearbyStationSnapshot {
+    stationId: string;
+    stationName: string;
+    distance: number;
+    status: StationStatus;
+    currentInventory: number;
+    queueLength: number;
+    avgWaitTime: number;
+}
+
+export interface FailedRide {
+    // Driver Information
+    driverId: string;
+    driverName: string;
+
+    // Location Data
+    failurePosition: Position;
+    failureGeoPosition: GeoPosition;
+    originPosition: Position;
+    originGeoPosition: GeoPosition;
+
+    // Battery & Journey Data
+    batteryLevel: number;
+    travelTime: number;
+    waitTime: number;
+
+    // Target Station Data
+    targetStationId: string | null;
+    targetStationName: string | null;
+    targetStationDistance: number | null;
+
+    // Failure Context
+    failureReason: FailureReason;
+    failureTimestamp: Date;
+    simulationDay: number;
+    hourOfDay: number;
+
+    // Environmental Context
+    weatherCondition: string | null;
+    weatherMultiplier: number | null;
+    temperature: number | null;
+
+    // Network State
+    operationalStationsCount: number;
+    totalNetworkInventory: number;
+    networkUtilization: number;
+    avgNetworkWaitTime: number;
+
+    // Nearby Stations Context (for ML training)
+    nearbyStations: NearbyStationSnapshot[];
+
+    // Rerouting History
+    wasRerouted: boolean;
+    rerouteAttempts: number;
+
+    // Financial Impact
+    owedAmount: number;
+    swapsToday: number;
 }
 
 export interface KPIs {
@@ -131,6 +205,7 @@ export interface SimulationState {
         time: Date;
         kpis: KPIs;
     }[];
+    failedRides: FailedRide[];
 }
 
 export const INITIAL_KPIS: KPIs = {

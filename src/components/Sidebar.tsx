@@ -6,6 +6,7 @@ import {
     LayoutGrid,
     Users,
     LogOut,
+    AlertTriangle,
 } from 'lucide-react';
 import { logout } from '@/app/login/actions';
 
@@ -17,6 +18,7 @@ interface SidebarProps {
 const navItems = [
     { id: 'dashboard', icon: LayoutGrid, label: 'Dashboard', path: '/' },
     { id: 'drivers', icon: Users, label: 'Drivers', path: '/drivers' },
+    { id: 'last-mile', icon: AlertTriangle, label: 'Last Mile', path: '/last-mile' },
 ];
 
 export function Sidebar({ activeTab = 'dashboard', onTabChange }: SidebarProps) {

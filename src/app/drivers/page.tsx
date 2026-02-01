@@ -4,7 +4,7 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { Driver, DriverState } from '@/simulation/types';
-import { Battery, Navigation, Clock, DollarSign, Zap } from 'lucide-react';
+import { Battery, Navigation, Clock, DollarSign, Zap, AlertTriangle } from 'lucide-react';
 
 const stateColors: Record<DriverState, string> = {
     idle: 'var(--text-muted)',
@@ -156,6 +156,7 @@ export default function DriversPage() {
     const { state, toggleSimulation, reset, setSpeed } = useSimulation();
     const drivers = state?.drivers || [];
     const stations = state?.stations || [];
+    const failedRides = state?.failedRides || [];
 
     // Count drivers by state
     const stateCounts = drivers.reduce((acc, driver) => {
@@ -309,6 +310,32 @@ export default function DriversPage() {
                                 marginTop: 'var(--space-2xs)',
                             }}>
                                 {stateCounts.idle || 0}
+                            </div>
+                        </div>
+
+                        <div style={{
+                            padding: 'var(--space-md)',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-subtle)',
+                            borderRadius: 'var(--radius-md)',
+                        }}>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--space-xs)',
+                                fontSize: 'var(--font-xs)',
+                                color: 'var(--text-muted)',
+                            }}>
+                                <AlertTriangle size={14} />
+                                Failed Rides
+                            </div>
+                            <div style={{
+                                fontSize: 'var(--font-2xl)',
+                                fontWeight: 600,
+                                color: 'var(--status-emergency)',
+                                marginTop: 'var(--space-2xs)',
+                            }}>
+                                {failedRides.length}
                             </div>
                         </div>
                     </div>
